@@ -8,6 +8,7 @@ resolution-markers = [
 
 [manifest]
 overrides = [
+    { name = "better-actuator-models", git = "https://github.com/Rhoban/bam.git?rev=62bd8ce12154340be97e06f7f41a0ca8f116d967" },
     { name = "onnx", specifier = ">=1.20.1" },
     { name = "protobuf", specifier = ">=4.0,<7.0" },
     { name = "zmq", marker = "python_full_version < '3'" },
@@ -103,7 +104,7 @@ wheels = [
 [[package]]
 name = "better-actuator-models"
 version = "1.0.1"
-source = { git = "https://github.com/Rhoban/bam.git?branch=mjlab_frictionloss#57d13ead53206a6bf0db3d66f86506ae8c2ce01a" }
+source = { git = "https://github.com/Rhoban/bam.git?rev=62bd8ce12154340be97e06f7f41a0ca8f116d967#62bd8ce12154340be97e06f7f41a0ca8f116d967" }
 dependencies = [
     { name = "colorama" },
     { name = "numpy" },

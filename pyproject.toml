@@ -47,6 +47,9 @@ override-dependencies = [
     # remote build), even though a warm local cache tolerated it. We only use
     # bam.mjlab (no zmq/erob messaging), so drop zmq via an always-false marker.
     "zmq ; python_version < '3.0'",
+    # Name only: makes the [tool.uv.sources] pin above apply to mjlab-microduck's
+    # transitive requirement too (uv applies sources to direct deps and overrides only).
+    "better-actuator-models",
 ]
 
 [tool.uv.sources]
@@ -58,9 +61,11 @@ mjlab-microduck = { git = "https://github.com/pollen-robotics/microduck_rl", bra
 # token. When that repo goes public this becomes
 # https://github.com/pollen-robotics/microduck-arena/releases/download/v0.2.0/microduck_arena-0.2.0-py3-none-any.whl
 microduck-arena = { url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.2.0-py3-none-any.whl" }
-# Official BAM actuator model. Switch to `main` (or a tag) once the
-# mjlab-facing API lands there.
-better-actuator-models = { git = "https://github.com/Rhoban/bam.git", branch = "mjlab_frictionloss" }
+# Official BAM actuator model. Pinned to the exact commit microduck_rl's own
+# uv.lock uses: the `mjlab_frictionloss` branch moved (now 57d13ea) and
+# mjlab_microduck no longer imports against its head (FrictionDRBamActuatorCfg
+# has no vin_drop_gain_range there). Move this pin together with microduck_rl's lock.
+better-actuator-models = { git = "https://github.com/Rhoban/bam.git", rev = "62bd8ce12154340be97e06f7f41a0ca8f116d967" }
 # For local BAM development, comment the line above and use:
 # better-actuator-models = { path = "/home/antoine/Rhoban/bam", editable = true }
 # On linux-aarch64 (DGX Spark / GB10) PyPI's torch wheel is CPU-ONLY:
