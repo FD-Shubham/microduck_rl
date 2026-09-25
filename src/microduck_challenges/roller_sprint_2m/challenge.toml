@@ -1,0 +1,23 @@
+# The 2 m Roller Sprint: skate a flat 2 m lane on roller blades as fast as
+# possible. The Arena races the policy at forward commands from 0.30 to 2.00
+# and keeps its best.
+event = "roller-sprint-2m"
+task  = "Mjlab-RollerSprint2m-MicroDuck"
+kind  = "perpetual"
+
+[recipe]
+num_envs       = 4096
+max_iterations = 3000
+seed           = 1
+
+[params.speed_reward]
+label = "Wheel speed reward"
+value = 10.0
+min   = 2.0
+max   = 20.0
+
+[params.upright_reward]
+label = "Stay upright"
+value = 2.0
+min   = 0.5
+max   = 5.0

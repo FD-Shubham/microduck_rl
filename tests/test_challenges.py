@@ -33,6 +33,10 @@ CHALLENGES = {
         "step_reward": ("air_time", 4.1),
         "max_slope_deg": (None, 12.0),
     },
+    "roller_sprint_2m": {
+        "speed_reward": ("wheel_speed", 13.5),
+        "upright_reward": ("upright", 1.3),
+    },
 }
 
 ROOT = Path(microduck_challenges.__file__).parent
