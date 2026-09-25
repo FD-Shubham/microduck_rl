@@ -25,12 +25,13 @@ sim2real machinery, and updated for the NEW roller model:
     (dr.dof_frictionloss on the passive wheels + existing curriculum).
 
 Task design (the roller recipe):
-  cmd_x semantics: on the Arena the command is always a push, 0.30-2.00 m/s
-  (arena/events/roller-sprint-2m.toml) — no coast, no brake.
+  cmd_x semantics: 0 = coast, >0 = push to accelerate, <0 = brake. The top of
+  the push range grows to the Arena's 2.00 m/s (arena/events/roller-sprint-2m.
+  toml) over training, via the command_vel curriculum below.
   cmd[2] = heading error via RelativeHeadingVelocityCommand.
   Sole positive task reward is wheel_speed — the robot must actually spin its
-  wheels; skating_air_time/forward_lean/heading_tracking shape the skating
-  style.
+  wheels; braking/skating_air_time/forward_lean/heading_tracking shape the
+  skating style.
 """
 
 import math
@@ -278,6 +279,12 @@ def make_env_cfg(
         func=microduck_mdp.wheel_speed_reward,
         weight=knobs["speed_reward"],
         params={"command_name": "twist", "vel_scale": 0.3},
+    )
+    # Brake: reward stopping when cmd_x < 0. Silent at cmd_x >= 0 (coast/push).
+    cfg.rewards["braking"] = RewardTermCfg(
+        func=microduck_mdp.braking_reward,
+        weight=1.0,
+        params={"command_name": "twist", "vel_std": 0.3},
     )
     # Air time during push: pay the recovery-foot lift, but ONLY when the body is
     # actually moving forward (vel_gate_ref) — otherwise a fast in-place flutter
@@ -561,9 +568,14 @@ def make_env_cfg(
     command.rel_heading_envs = 0.0
     command.heading_command = False  # RelativeHeadingVelocityCommand handles heading internally
     command.ranges.heading = None    # must be None when heading_command=False
-    # The range is the Arena event's own sweep (arena/events/roller-sprint-2m.toml):
-    # on the Arena the command is always a push, 0.30-2.00 — no coast, no brake.
-    command.ranges.lin_vel_x = (0.30, 2.00)
+    # cmd_x semantics: 0=coast, >0=push to accelerate, <0=brake to stop. This is
+    # the source recipe's starting range (known to train); the command_vel
+    # curriculum below widens its top end to the Arena's sweep.
+    command.ranges.lin_vel_x = (-0.5, 0.6)
+    if play:
+        # Play has no training steps to advance the command_vel curriculum below;
+        # command the Arena's full sweep directly (arena/events/roller-sprint-2m.toml).
+        command.ranges.lin_vel_x = (-0.5, 2.0)
     command.ranges.lin_vel_y = (0.0, 0.0)
     # ang_vel_z range is the clip limit for cmd[2] = heading error (rad).
     # Set to 0 → cmd[2] is always 0 → no turning demand (straight-line focus).
@@ -576,7 +588,24 @@ def make_env_cfg(
 
     # === CURRICULUM ===
     del cfg.curriculum["terrain_levels"]
-    del cfg.curriculum["command_vel"]
+
+    # Jumping the push command straight to the Arena's sweep (0.30-2.00 m/s) from
+    # iteration 0 broke training (measured on HF Jobs: stable to iteration 150,
+    # falling constantly from iteration 250 on, unrecovered at iteration 1000).
+    # Start from the source recipe's range instead and widen only its top end in
+    # stages; the last stage is the Arena's top command.
+    cfg.curriculum["command_vel"] = CurriculumTermCfg(
+        func=mdp.commands_vel,
+        params={
+            "command_name": "twist",
+            "velocity_stages": [
+                {"step": 0 * 24,    "lin_vel_x": (-0.5, 0.6)},
+                {"step": 1000 * 24, "lin_vel_x": (-0.5, 1.0)},
+                {"step": 1750 * 24, "lin_vel_x": (-0.5, 1.5)},
+                {"step": 2500 * 24, "lin_vel_x": (-0.5, 2.0)},
+            ],
+        },
+    )
 
     # action_rate penalty raised (-0.5/-0.8/-1.0 -> -1.0/-1.5/-2.0) for a CALMER
     # gait: this is the main "less movement" lever — it penalises fast/large action

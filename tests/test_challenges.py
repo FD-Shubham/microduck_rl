@@ -50,13 +50,44 @@ def _contract(folder):
 RACES = ["sprint_2m", "hill_climb_1m5", "roller_sprint_2m"]
 
 
+def _final_forward_range(cfg):
+    """The lin_vel_x range training ends at: the command_vel curriculum's last stage when the
+    task has one (it widens the range over training), else the command's own fixed range."""
+    if "command_vel" in cfg.curriculum:
+        return cfg.curriculum["command_vel"].params["velocity_stages"][-1]["lin_vel_x"]
+    return cfg.commands["twist"].ranges.lin_vel_x
+
+
 @pytest.mark.parametrize("folder", RACES)
 def test_training_covers_the_speeds_the_arena_commands(folder):
     env = importlib.import_module(f"microduck_challenges.{folder}.env")
-    ranges = env.make_env_cfg().commands["twist"].ranges
+    cfg = env.make_env_cfg()
+    lin_vel_x = _final_forward_range(cfg)
     event = load_event(_contract(folder).event)
-    assert ranges.lin_vel_x[0] <= event.sweep.lo and ranges.lin_vel_x[1] >= event.sweep.hi
+    assert lin_vel_x[0] <= event.sweep.lo and lin_vel_x[1] >= event.sweep.hi
+    ranges = cfg.commands["twist"].ranges
     assert ranges.lin_vel_y == (0.0, 0.0) and ranges.ang_vel_z == (0.0, 0.0)
+
+
+def test_the_rollers_curriculum_only_widens_the_top_end():
+    """The command_vel curriculum must only grow the push range's top end (the collapse this
+    fixes came from jumping straight to the Arena's top speed); the bottom stays at the source
+    recipe's -0.5 throughout. Play mode has no training steps to advance the curriculum, so it
+    must command the Arena's full sweep directly."""
+    from microduck_challenges.roller_sprint_2m.env import make_env_cfg
+
+    stages = make_env_cfg().curriculum["command_vel"].params["velocity_stages"]
+    prev_max = None
+    for stage in stages:
+        lo, hi = stage["lin_vel_x"]
+        assert lo == -0.5
+        if prev_max is not None:
+            assert hi >= prev_max
+        prev_max = hi
+
+    event = load_event(_contract("roller_sprint_2m").event)
+    play_range = make_env_cfg(play=True).commands["twist"].ranges.lin_vel_x
+    assert play_range[0] <= event.sweep.lo and play_range[1] >= event.sweep.hi
 
 
 @pytest.mark.parametrize("folder", CHALLENGES)
