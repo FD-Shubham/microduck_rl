@@ -22,6 +22,11 @@ CHALLENGES = {
         "upright_reward": ("upright", 1.3),
         "step_reward": ("air_time", 4.1),
     },
+    "swag_contest": {
+        "step_reward": ("air_time", 5.2),
+        "upright_reward": ("upright", 0.9),
+        "head_reward": ("head_pose_tracking", 2.6),
+    },
 }
 
 ROOT = Path(microduck_challenges.__file__).parent
