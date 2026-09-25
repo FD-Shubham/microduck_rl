@@ -12,12 +12,12 @@ gait/feet terms, curriculum-ramped action-rate smoothing), with:
 
   - foot_slip kept at -0.1 (deliberately weak — stronger was too restrictive
     for this robot's pivot-heavy turning)
-  - fixed, modest command ranges (ang ±1.0 makes turning learnable) instead of
-    a widening curriculum that outpaced the robot's capability
-  - turn-in-place: 15% of envs get lin=0 + |ang| ∈ [0.4, 1.0] (2026-07 audit:
-    independent uniform sampling makes spin-on-the-spot ~2% of data → untrained)
+  - fixed command ranges taken straight from the Arena event's sweep
+    (arena/events/sprint-2m.toml) — straight ahead only, never sideways or
+    turning (see the command section below)
   - head_pose_tracking as a primary objective, plus an EMA-based head_pose_bias
-    penalty that prices only the escapable DC head droop (see below)
+    penalty that prices only the escapable DC head droop (see below); the head
+    command itself is held at its small initial range (no widening curriculum)
   - body_pose tracking infra kept intact but DISABLED (weight 0) so the obs
     slot stays alive for envs that use it
 """
@@ -26,9 +26,6 @@ import math
 from copy import deepcopy
 
 NUM_STEPS_PER_ENV = 24
-
-# Fraction of envs commanded to spin on the spot (lin=0, |ang| ∈ [0.4·max, max]).
-TURN_IN_PLACE_FRACTION = 0.15
 
 # Symmetry
 ENABLE_SYMMETRY = False
@@ -578,28 +575,22 @@ def make_env_cfg(
     cfg.commands["twist"] = command
     command.rel_standing_envs = 0.02  # small but non-zero from the start, ramped up by curriculum
     command.rel_heading_envs = 0.0
-    # Modest, FIXED command ranges (no widening curriculum): a ramp to
-    # lin ±0.4 / ang ±2.0 outpaced the robot's capability and tracked a
-    # post-iter-1000 reward/episode-length decline. ang ±1.0 is the big
-    # change — it makes turning learnable.
-    command.ranges.lin_vel_x = (-0.4, 0.4)
-    command.ranges.lin_vel_y = (-0.3, 0.3)
-    command.ranges.ang_vel_z = (-1.0, 1.0)
+    # The ranges are the Arena event's own (arena/events/sprint-2m.toml):
+    # straight ahead, the event's sweep of commanded speeds, never sideways or
+    # turning. History: the source task trained ±0.4 m/s, and the Arena's
+    # reference walker then peaked at exactly 0.40 m/s — the top of that range.
+    command.ranges.lin_vel_x = (0.20, 1.20)
+    command.ranges.lin_vel_y = (0.0, 0.0)
+    command.ranges.ang_vel_z = (0.0, 0.0)
     command.viz.z_offset = 0.5
     cfg.commands["twist"] = microduck_mdp.VelocityCommandCommandOnlyCfg(**vars(command))
-    # Explicit turn-in-place bucket (see TURN_IN_PLACE_FRACTION above).
-    cfg.commands["twist"].rel_turn_in_place_envs = TURN_IN_PLACE_FRACTION
 
     # Head pose command (4D deltas from HOME, in joint order:
     #   neck_pitch, head_pitch, head_yaw, head_roll). Tracked as a primary
-    # reward — see "head_pose_tracking" added below. Initial ranges are small
-    # non-zero so input neurons stay alive from step 0; curriculum widens them.
-    # Per-joint final caps reflect each joint's mechanically reachable delta
-    # from HOME (XML limits minus HOME offset, with ~10% safety margin):
-    #   neck_pitch / head_pitch: ±1.10 rad (limit ±π/2 with HOME=±20°)
-    #   head_yaw                : ±1.40 rad (limit ±π/2 with HOME=0)
-    #   head_roll               : ±0.31 rad (limit ±20°)
-    # Initial ranges are small non-zero so input neurons stay alive from step 0.
+    # reward — see "head_pose_tracking" added below. Ranges are small non-zero
+    # (not zero) so the input neurons stay alive, and held there for the whole
+    # run — the Arena commands no head motion, so there is no widening
+    # curriculum here (the head stays still).
     cfg.commands["head_pose"] = microduck_mdp.UniformPoseCommandCfg(
         resampling_time_range=HEAD_POSE_CMD_RESAMPLE_S,
         ranges=(
@@ -639,11 +630,9 @@ def make_env_cfg(
 
     # === Pose tracking rewards ===
     # head_pose: primary objective in vel env — the whole point of the rewrite.
-    # std=0.5 with per-joint Gaussian (see head_pose_tracking in mdp.py): at the
-    # full ±1.0 rad command, a non-tracking policy still sees per-joint reward
-    # exp(-(1/0.5)²)=exp(-4)≈0.018 — a small but non-zero gradient — so the
-    # curriculum widening doesn't kill the signal. Final reward is the mean
-    # over 4 joints, so partial tracking is partial reward (no all-or-nothing).
+    # std=0.5 with per-joint Gaussian (see head_pose_tracking in mdp.py). Final
+    # reward is the mean over 4 joints, so partial tracking is partial reward
+    # (no all-or-nothing).
     cfg.rewards["head_pose_tracking"] = RewardTermCfg(
         func=microduck_mdp.head_pose_tracking,
         weight=2.0,
@@ -719,26 +708,9 @@ def make_env_cfg(
     )
 
     # NOTE: no velocity-command-range curriculum — ranges are fixed (see the
-    # command section above).
-
-    # Head pose command range curriculum — per-joint, scaled to each joint's
-    # reachable delta from HOME (with ~10% margin from XML limits). Same 5-stage
-    # shape as before (5% → 15% → 35% → 65% → 100% of each joint's final cap).
-    # neck/head pitch final ±1.10 rad, head_yaw ±1.40, head_roll ±0.31.
-    cfg.curriculum["head_pose_range"] = CurriculumTermCfg(
-        func=microduck_mdp.pose_command_range_curriculum,
-        params={
-            "command_name": "head_pose",
-            "range_stages": [
-                # step,                ranges = ((neck_pitch), (head_pitch), (head_yaw),  (head_roll))
-                {"step": 0,         "ranges": ((-0.05, 0.05),  (-0.05, 0.05),  (-0.07, 0.07),  (-0.015, 0.015))},
-                {"step": 500 * 24,  "ranges": ((-0.17, 0.17),  (-0.17, 0.17),  (-0.21, 0.21),  (-0.047, 0.047))},
-                {"step": 1000 * 24, "ranges": ((-0.39, 0.39),  (-0.39, 0.39),  (-0.49, 0.49),  (-0.11, 0.11))},
-                {"step": 1500 * 24, "ranges": ((-0.72, 0.72),  (-0.72, 0.72),  (-0.91, 0.91),  (-0.20, 0.20))},
-                {"step": 2000 * 24, "ranges": ((-1.10, 1.10),  (-1.10, 1.10),  (-1.40, 1.40),  (-0.31, 0.31))},
-            ],
-        },
-    )
+    # command section above). Same for head_pose: no range curriculum — the
+    # head stays at its small initial range for the whole run (see the
+    # head_pose command section above).
 
     # Body pose command range curriculum: stay small in vel env. Standup env
     # overrides this curriculum with wide ranges + heavy reward weight.
