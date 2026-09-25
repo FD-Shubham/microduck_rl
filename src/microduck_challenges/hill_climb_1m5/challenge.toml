@@ -1,0 +1,34 @@
+# The 1.5 m Hill Climb: walk up an 8° lane as fast as possible. The Arena races
+# the policy at forward commands from 0.15 to 1.00 m/s and keeps its best.
+event = "hill-climb-1m5"
+task  = "Mjlab-HillClimb1m5-MicroDuck"
+kind  = "perpetual"
+
+[recipe]
+num_envs       = 4096
+max_iterations = 3000
+seed           = 1
+
+[params.forward_reward]
+label = "Speed reward"
+value = 2.0
+min   = 0.5
+max   = 5.0
+
+[params.upright_reward]
+label = "Stay upright"
+value = 2.0
+min   = 0.5
+max   = 5.0
+
+[params.step_reward]
+label = "Lift your feet"
+value = 3.0
+min   = 0.0
+max   = 6.0
+
+[params.max_slope_deg]
+label = "Steepest training slope (°)"
+value = 10.0
+min   = 8.0
+max   = 15.0

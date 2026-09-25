@@ -27,6 +27,12 @@ CHALLENGES = {
         "upright_reward": ("upright", 0.9),
         "head_reward": ("head_pose_tracking", 2.6),
     },
+    "hill_climb_1m5": {
+        "forward_reward": ("track_linear_velocity", 3.7),
+        "upright_reward": ("upright", 1.3),
+        "step_reward": ("air_time", 4.1),
+        "max_slope_deg": (None, 12.0),
+    },
 }
 
 ROOT = Path(microduck_challenges.__file__).parent
@@ -91,3 +97,18 @@ def _set_value(text: str, knob: str, value: float) -> str:
             lines[i] = f"value = {value}\n"
             return before + head + "".join(lines)
     raise AssertionError(f"{head} has no value")
+
+
+def test_the_hill_trains_on_slopes_up_to_the_knob(tmp_path, monkeypatch):
+    toml = ROOT / "hill_climb_1m5" / "challenge.toml"
+    copy = tmp_path / "challenge.toml"
+    copy.write_text(_set_value(toml.read_text(), "max_slope_deg", 12.0))
+    real_params = challenge.params
+    monkeypatch.setattr(challenge, "params", lambda f: real_params(copy))
+    from microduck_challenges.hill_climb_1m5.env import make_env_cfg
+
+    terrain = make_env_cfg().scene.terrain
+    assert terrain.terrain_type == "generator"
+    slope = terrain.terrain_generator.sub_terrains["slope"]
+    assert math.isclose(slope.slope_range[1], math.tan(math.radians(12.0)))
+    assert slope.slope_range[1] > math.tan(math.radians(8.0)), "must cover the course's 8°"
