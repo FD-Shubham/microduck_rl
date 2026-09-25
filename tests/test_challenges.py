@@ -71,6 +71,17 @@ def test_runs_log_under_the_folder_name(folder):
     assert env.RL_CFG.experiment_name == folder
 
 
+def test_every_toml_knob_is_in_the_table():
+    """A knob added to challenge.toml but not to CHALLENGES would otherwise go unchecked."""
+    for folder in CHALLENGES:
+        assert set(CHALLENGES[folder]) == set(challenge.params(ROOT / folder / "tasks.py")), folder
+
+
+def test_every_challenge_folder_has_a_row():
+    """A folder without a CHALLENGES row goes unchecked by every test above."""
+    assert set(CHALLENGES) == {p.parent.name for p in ROOT.glob("*/challenge.toml")}
+
+
 @pytest.mark.parametrize("folder", CHALLENGES)
 def test_knobs_reach_the_config(folder, tmp_path, monkeypatch):
     """Rewrite the knobs to unusual values; the rebuilt config must carry them."""
@@ -105,6 +116,8 @@ def _set_value(text: str, knob: str, value: float) -> str:
 
 def test_the_hill_trains_on_slopes_up_to_the_knob(tmp_path, monkeypatch):
     toml = ROOT / "hill_climb_1m5" / "challenge.toml"
+    # Read the SHIPPED value before challenge.params gets monkeypatched below.
+    shipped_max_slope_deg = challenge.params(ROOT / "hill_climb_1m5" / "tasks.py")["max_slope_deg"]
     copy = tmp_path / "challenge.toml"
     copy.write_text(_set_value(toml.read_text(), "max_slope_deg", 12.0))
     real_params = challenge.params
@@ -115,4 +128,4 @@ def test_the_hill_trains_on_slopes_up_to_the_knob(tmp_path, monkeypatch):
     assert terrain.terrain_type == "generator"
     slope = terrain.terrain_generator.sub_terrains["slope"]
     assert math.isclose(slope.slope_range[1], math.tan(math.radians(12.0)))
-    assert slope.slope_range[1] > math.tan(math.radians(8.0)), "must cover the course's 8°"
+    assert shipped_max_slope_deg > 8.0, "must cover the course's 8°"

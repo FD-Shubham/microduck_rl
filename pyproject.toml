@@ -47,13 +47,15 @@ override-dependencies = [
     # remote build), even though a warm local cache tolerated it. We only use
     # bam.mjlab (no zmq/erob messaging), so drop zmq via an always-false marker.
     "zmq ; python_version < '3.0'",
-    # Name only: makes the [tool.uv.sources] pin above apply to mjlab-microduck's
+    # Name only: makes the [tool.uv.sources] pin below apply to mjlab-microduck's
     # transitive requirement too (uv applies sources to direct deps and overrides only).
     "better-actuator-models",
 ]
 
 [tool.uv.sources]
 # Plan 1 of the workshop, in review as microduck_rl#57; `develop` once it merges.
+# Keep this branch on GitHub until this source moves to `develop` and the lock
+# is re-made: an un-frozen `uv sync` (as in an HF job) fetches it directly.
 mjlab-microduck = { git = "https://github.com/pollen-robotics/microduck_rl", branch = "challenge-recipe-publishing" }
 # The Arena's wheel. Interim: a PRIVATE Hub repo, fetched with HF_TOKEN (uv sends
 # it to huggingface.co; an HF job gets it as a secret), because a release asset

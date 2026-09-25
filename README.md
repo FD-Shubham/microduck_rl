@@ -12,7 +12,13 @@ working training environment: train it unchanged and the robot competes.
 
 ## Train from a shell
 
-Needs Python 3.12 and `uv`. Training needs an NVIDIA GPU, or Hugging Face Jobs:
+Needs Python 3.12 and `uv`. Training needs an NVIDIA GPU, or Hugging Face Jobs.
+
+While the Arena wheel sits on a private Hub repo, EVERY `uv` command in this
+checkout needs `HF_TOKEN` — even a plain `uv run` re-checks the lock and
+re-fetches the wheel URL, and gets a 401 without it. Log in once
+(`hf auth login`), then export the token in the shell (or its profile) before
+any `uv` command:
 
 ```bash
 git clone https://github.com/pollen-robotics/microduck-challenges && cd microduck-challenges
@@ -24,7 +30,28 @@ uv run train Mjlab-Sprint2m-MicroDuck --env.scene.num-envs 4096 --agent.max-iter
 ```
 
 A challenge's knobs are in its `challenge.toml` (`[params]`); its whole
-environment is in `env.py`. Edit either, commit, train.
+environment is in `env.py`. Edit either, commit, train. To add a custom
+reward, write the function in a `rewards.py` next to the challenge's `env.py`
+and add it to `cfg.rewards` in `env.py`.
 
-Then `uv run publish --run logs/rsl_rl/<folder>/<run> --repo <you>/<name>` and
-paste the repo on the challenge's page on the Arena.
+`--hf-jobs` trains on Hugging Face's infrastructure instead of a local GPU;
+nothing lands in `logs/rsl_rl/` here. Its checkpoints go to the Hub repo the
+submission prints (`[ckpt] checkpoints -> <repo>`), mirroring `logs/rsl_rl/` —
+bring them back before publishing:
+
+```bash
+uv run hf download <that repo> --local-dir logs/rsl_rl
+```
+
+Then `uv run publish --run logs/rsl_rl/<folder>/<run> --repo <you>/<name> --no-private`
+and paste the repo on the challenge's page on the Arena (`publish` creates the
+Hub repo private by default; the Arena reads with its own token, so it needs
+`--no-private` to see it).
+
+## Tests
+
+```bash
+uv run --group workshop pytest
+```
+
+(the tests import the Arena, which lives in the `workshop` group).
