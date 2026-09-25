@@ -72,8 +72,10 @@ def test_training_covers_the_speeds_the_arena_commands(folder):
 def test_the_rollers_curriculum_only_widens_the_top_end():
     """The command_vel curriculum must only grow the push range's top end (the collapse this
     fixes came from jumping straight to the Arena's top speed); the bottom stays at the source
-    recipe's -0.5 throughout. Play mode has no training steps to advance the curriculum, so it
-    must command the Arena's full sweep directly."""
+    recipe's -0.5 throughout. Play mode has no training steps to advance the curriculum, so the
+    term must not be registered at all (registered-but-stuck-at-stage-0 would stomp the play
+    override back to the source's narrow range on env construction's reset); it must command the
+    Arena's full sweep directly instead."""
     from microduck_challenges.roller_sprint_2m.env import make_env_cfg
 
     stages = make_env_cfg().curriculum["command_vel"].params["velocity_stages"]
@@ -86,7 +88,9 @@ def test_the_rollers_curriculum_only_widens_the_top_end():
         prev_max = hi
 
     event = load_event(_contract("roller_sprint_2m").event)
-    play_range = make_env_cfg(play=True).commands["twist"].ranges.lin_vel_x
+    play_cfg = make_env_cfg(play=True)
+    assert "command_vel" not in play_cfg.curriculum
+    play_range = play_cfg.commands["twist"].ranges.lin_vel_x
     assert play_range[0] <= event.sweep.lo and play_range[1] >= event.sweep.hi
 
 

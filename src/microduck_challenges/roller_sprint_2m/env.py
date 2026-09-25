@@ -589,23 +589,31 @@ def make_env_cfg(
     # === CURRICULUM ===
     del cfg.curriculum["terrain_levels"]
 
-    # Jumping the push command straight to the Arena's sweep (0.30-2.00 m/s) from
-    # iteration 0 broke training (measured on HF Jobs: stable to iteration 150,
-    # falling constantly from iteration 250 on, unrecovered at iteration 1000).
-    # Start from the source recipe's range instead and widen only its top end in
-    # stages; the last stage is the Arena's top command.
-    cfg.curriculum["command_vel"] = CurriculumTermCfg(
-        func=mdp.commands_vel,
-        params={
-            "command_name": "twist",
-            "velocity_stages": [
-                {"step": 0 * 24,    "lin_vel_x": (-0.5, 0.6)},
-                {"step": 1000 * 24, "lin_vel_x": (-0.5, 1.0)},
-                {"step": 1750 * 24, "lin_vel_x": (-0.5, 1.5)},
-                {"step": 2500 * 24, "lin_vel_x": (-0.5, 2.0)},
-            ],
-        },
-    )
+    if play:
+        # No training steps in play mode to advance the curriculum below, and env
+        # construction's own reset (step 0) would otherwise immediately re-apply
+        # its stage 0 and stomp the play override above back to (-0.5, 0.6) —
+        # pinning any loaded checkpoint below iteration 2500 to the wrong range.
+        # Drop the term entirely; play keeps the full (-0.5, 2.0) range set above.
+        del cfg.curriculum["command_vel"]
+    else:
+        # Jumping the push command straight to the Arena's sweep (0.30-2.00 m/s)
+        # from iteration 0 broke training (measured on HF Jobs: stable to
+        # iteration 150, falling constantly from iteration 250 on, unrecovered at
+        # iteration 1000). Start from the source recipe's range instead and widen
+        # only its top end in stages; the last stage is the Arena's top command.
+        cfg.curriculum["command_vel"] = CurriculumTermCfg(
+            func=mdp.commands_vel,
+            params={
+                "command_name": "twist",
+                "velocity_stages": [
+                    {"step": 0 * 24,    "lin_vel_x": (-0.5, 0.6)},
+                    {"step": 1000 * 24, "lin_vel_x": (-0.5, 1.0)},
+                    {"step": 1750 * 24, "lin_vel_x": (-0.5, 1.5)},
+                    {"step": 2500 * 24, "lin_vel_x": (-0.5, 2.0)},
+                ],
+            },
+        )
 
     # action_rate penalty raised (-0.5/-0.8/-1.0 -> -1.0/-1.5/-2.0) for a CALMER
     # gait: this is the main "less movement" lever — it penalises fast/large action
