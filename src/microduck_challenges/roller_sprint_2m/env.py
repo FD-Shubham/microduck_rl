@@ -24,12 +24,13 @@ sim2real machinery, and updated for the NEW roller model:
     per-env-verified) versions; wheel-bearing frictionloss DR kept
     (dr.dof_frictionloss on the passive wheels + existing curriculum).
 
-Task design (unchanged — the roller recipe):
-  cmd_x semantics: 0 = coast, >0 = push to accelerate, <0 = brake.
+Task design (the roller recipe):
+  cmd_x semantics: on the Arena the command is always a push, 0.30-2.00 m/s
+  (arena/events/roller-sprint-2m.toml) — no coast, no brake.
   cmd[2] = heading error via RelativeHeadingVelocityCommand.
   Sole positive task reward is wheel_speed — the robot must actually spin its
-  wheels; braking/skating_air_time/forward_lean/heading_tracking shape the
-  skating style.
+  wheels; skating_air_time/forward_lean/heading_tracking shape the skating
+  style.
 """
 
 import math
@@ -277,12 +278,6 @@ def make_env_cfg(
         func=microduck_mdp.wheel_speed_reward,
         weight=knobs["speed_reward"],
         params={"command_name": "twist", "vel_scale": 0.3},
-    )
-    # Brake: reward stopping when cmd_x < 0. Silent at cmd_x >= 0 (coast/push).
-    cfg.rewards["braking"] = RewardTermCfg(
-        func=microduck_mdp.braking_reward,
-        weight=1.0,
-        params={"command_name": "twist", "vel_std": 0.3},
     )
     # Air time during push: pay the recovery-foot lift, but ONLY when the body is
     # actually moving forward (vel_gate_ref) — otherwise a fast in-place flutter
@@ -566,8 +561,9 @@ def make_env_cfg(
     command.rel_heading_envs = 0.0
     command.heading_command = False  # RelativeHeadingVelocityCommand handles heading internally
     command.ranges.heading = None    # must be None when heading_command=False
-    # cmd_x semantics: 0=coast, >0=push to accelerate, <0=brake to stop
-    command.ranges.lin_vel_x = (-0.5, 0.6)
+    # The range is the Arena event's own sweep (arena/events/roller-sprint-2m.toml):
+    # on the Arena the command is always a push, 0.30-2.00 — no coast, no brake.
+    command.ranges.lin_vel_x = (0.30, 2.00)
     command.ranges.lin_vel_y = (0.0, 0.0)
     # ang_vel_z range is the clip limit for cmd[2] = heading error (rad).
     # Set to 0 → cmd[2] is always 0 → no turning demand (straight-line focus).
