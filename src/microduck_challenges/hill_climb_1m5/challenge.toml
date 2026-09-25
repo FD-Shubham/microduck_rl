@@ -10,7 +10,7 @@ max_iterations = 3000
 seed           = 1
 
 [params.forward_reward]
-label = "Speed reward"
+label = "Follow the speed order"
 value = 2.0
 min   = 0.5
 max   = 5.0
