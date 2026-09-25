@@ -46,6 +46,19 @@ def _contract(folder):
     return challenge.load(ROOT / folder / "tasks.py")
 
 
+# The challenges whose Arena event races a commanded speed; swag is judged on style.
+RACES = ["sprint_2m", "hill_climb_1m5", "roller_sprint_2m"]
+
+
+@pytest.mark.parametrize("folder", RACES)
+def test_training_covers_the_speeds_the_arena_commands(folder):
+    env = importlib.import_module(f"microduck_challenges.{folder}.env")
+    ranges = env.make_env_cfg().commands["twist"].ranges
+    event = load_event(_contract(folder).event)
+    assert ranges.lin_vel_x[0] <= event.sweep.lo and ranges.lin_vel_x[1] >= event.sweep.hi
+    assert ranges.lin_vel_y == (0.0, 0.0) and ranges.ang_vel_z == (0.0, 0.0)
+
+
 @pytest.mark.parametrize("folder", CHALLENGES)
 def test_the_task_is_registered(folder):
     assert _contract(folder).task in list_tasks()
