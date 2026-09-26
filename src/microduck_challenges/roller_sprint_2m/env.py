@@ -103,6 +103,14 @@ from mjlab_microduck.robot.microduck_constants import MICRODUCK_WALK_ROLLERS_ROB
 from mjlab_microduck.tasks import mdp as microduck_mdp
 from mjlab_microduck.tasks.symmetry import PpoWithSymmetryCfg, SYMMETRY_CFG
 
+from . import rewards
+
+# The source recipe's top command (its known-to-train range is -0.5..0.6 -- see the
+# command_vel curriculum below). Every push-scaled reward's command factor is capped here:
+# past this command the reward's scale would out-weigh staying upright (measured on HF Jobs,
+# see rewards.py's module docstring for the numbers).
+PUSH_REWARD_CMD_CAP = 0.6
+
 
 def make_env_cfg(
     play: bool = False,
@@ -276,9 +284,9 @@ def make_env_cfg(
     # reach -> launch instability). 0.3 saturates near the achievable speed, so it
     # is 'content' there instead of over-driving.
     cfg.rewards["wheel_speed"] = RewardTermCfg(
-        func=microduck_mdp.wheel_speed_reward,
+        func=rewards.capped_wheel_speed_reward,
         weight=knobs["speed_reward"],
-        params={"command_name": "twist", "vel_scale": 0.3},
+        params={"command_name": "twist", "vel_scale": 0.3, "cmd_cap": PUSH_REWARD_CMD_CAP},
     )
     # Brake: reward stopping when cmd_x < 0. Silent at cmd_x >= 0 (coast/push).
     cfg.rewards["braking"] = RewardTermCfg(
@@ -300,7 +308,7 @@ def make_env_cfg(
     # is less incentivised (lower cadence). glide (below) rewards the coast, so it
     # pushes only occasionally.
     cfg.rewards["skating_air_time"] = RewardTermCfg(
-        func=microduck_mdp.skating_air_time_reward,
+        func=rewards.capped_skating_air_time_reward,
         weight=1.5,
         params={
             "sensor_name": "feet_ground_contact",
@@ -308,6 +316,7 @@ def make_env_cfg(
             "threshold_min": 0.15,
             "threshold_max": 0.45,
             "vel_gate_ref": 0.2,
+            "cmd_cap": PUSH_REWARD_CMD_CAP,
         },
     )
     # Glide phase (single-support REQUIRED, unlike the earlier broken attempt):
@@ -333,12 +342,13 @@ def make_env_cfg(
     # down and penalises both-down while pushing — the core anti-swizzle signal.
     # Gated on forward speed too, so stepping that doesn't propel earns nothing.
     cfg.rewards["single_support"] = RewardTermCfg(
-        func=microduck_mdp.single_support_reward,
+        func=rewards.capped_single_support_reward,
         weight=3.0,
         params={
             "sensor_name": "feet_ground_contact",
             "command_name": "twist",
             "vel_gate_ref": 0.2,
+            "cmd_cap": PUSH_REWARD_CMD_CAP,
         },
     )
     # Balance left/right leg usage. With symmetry augmentation OFF nothing stops a
@@ -357,9 +367,14 @@ def make_env_cfg(
     # swings without rewarding not-stepping).
     # Encourage slight forward lean when pushing to counteract backward torque.
     cfg.rewards["forward_lean"] = RewardTermCfg(
-        func=microduck_mdp.forward_lean_reward,
+        func=rewards.capped_forward_lean_reward,
         weight=1.5,
-        params={"command_name": "twist", "target_pitch": 0.262, "std": 0.1},
+        params={
+            "command_name": "twist",
+            "target_pitch": 0.262,
+            "std": 0.1,
+            "cmd_cap": PUSH_REWARD_CMD_CAP,
+        },
     )
     # Heading command DISABLED (straight-line focus), but we hold the heading so it
     # doesn't drift: heading_hold rewards the yaw ANGLE staying near the spawn
