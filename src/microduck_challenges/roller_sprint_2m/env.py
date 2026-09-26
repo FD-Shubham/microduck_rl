@@ -25,9 +25,10 @@ sim2real machinery, and updated for the NEW roller model:
     (dr.dof_frictionloss on the passive wheels + existing curriculum).
 
 Task design (the roller recipe):
-  cmd_x semantics: 0 = coast, >0 = push to accelerate, <0 = brake. The top of
-  the push range grows to the Arena's 2.00 m/s (arena/events/roller-sprint-2m.
-  toml) over training, via the command_vel curriculum below.
+  cmd_x semantics: 0 = coast, >0 = push to accelerate, <0 = brake. The Arena
+  commands 0.30-2.00 m/s (arena/events/roller-sprint-2m.toml) and keeps the
+  best time; the policy's best is found within its trained 0-0.6 (see the
+  range comment below).
   cmd[2] = heading error via RelativeHeadingVelocityCommand.
   Sole positive task reward is wheel_speed — the robot must actually spin its
   wheels; braking/skating_air_time/forward_lean/heading_tracking shape the
@@ -102,14 +103,6 @@ from mjlab_microduck import challenge
 from mjlab_microduck.robot.microduck_constants import MICRODUCK_WALK_ROLLERS_ROBOT_CFG
 from mjlab_microduck.tasks import mdp as microduck_mdp
 from mjlab_microduck.tasks.symmetry import PpoWithSymmetryCfg, SYMMETRY_CFG
-
-from . import rewards
-
-# The source recipe's top command (its known-to-train range is -0.5..0.6 -- see the
-# command_vel curriculum below). Every push-scaled reward's command factor is capped here:
-# past this command the reward's scale would out-weigh staying upright (measured on HF Jobs,
-# see rewards.py's module docstring for the numbers).
-PUSH_REWARD_CMD_CAP = 0.6
 
 
 def make_env_cfg(
@@ -284,9 +277,9 @@ def make_env_cfg(
     # reach -> launch instability). 0.3 saturates near the achievable speed, so it
     # is 'content' there instead of over-driving.
     cfg.rewards["wheel_speed"] = RewardTermCfg(
-        func=rewards.capped_wheel_speed_reward,
+        func=microduck_mdp.wheel_speed_reward,
         weight=knobs["speed_reward"],
-        params={"command_name": "twist", "vel_scale": 0.3, "cmd_cap": PUSH_REWARD_CMD_CAP},
+        params={"command_name": "twist", "vel_scale": 0.3},
     )
     # Brake: reward stopping when cmd_x < 0. Silent at cmd_x >= 0 (coast/push).
     cfg.rewards["braking"] = RewardTermCfg(
@@ -308,7 +301,7 @@ def make_env_cfg(
     # is less incentivised (lower cadence). glide (below) rewards the coast, so it
     # pushes only occasionally.
     cfg.rewards["skating_air_time"] = RewardTermCfg(
-        func=rewards.capped_skating_air_time_reward,
+        func=microduck_mdp.skating_air_time_reward,
         weight=1.5,
         params={
             "sensor_name": "feet_ground_contact",
@@ -316,7 +309,6 @@ def make_env_cfg(
             "threshold_min": 0.15,
             "threshold_max": 0.45,
             "vel_gate_ref": 0.2,
-            "cmd_cap": PUSH_REWARD_CMD_CAP,
         },
     )
     # Glide phase (single-support REQUIRED, unlike the earlier broken attempt):
@@ -342,13 +334,12 @@ def make_env_cfg(
     # down and penalises both-down while pushing — the core anti-swizzle signal.
     # Gated on forward speed too, so stepping that doesn't propel earns nothing.
     cfg.rewards["single_support"] = RewardTermCfg(
-        func=rewards.capped_single_support_reward,
+        func=microduck_mdp.single_support_reward,
         weight=3.0,
         params={
             "sensor_name": "feet_ground_contact",
             "command_name": "twist",
             "vel_gate_ref": 0.2,
-            "cmd_cap": PUSH_REWARD_CMD_CAP,
         },
     )
     # Balance left/right leg usage. With symmetry augmentation OFF nothing stops a
@@ -367,14 +358,9 @@ def make_env_cfg(
     # swings without rewarding not-stepping).
     # Encourage slight forward lean when pushing to counteract backward torque.
     cfg.rewards["forward_lean"] = RewardTermCfg(
-        func=rewards.capped_forward_lean_reward,
+        func=microduck_mdp.forward_lean_reward,
         weight=1.5,
-        params={
-            "command_name": "twist",
-            "target_pitch": 0.262,
-            "std": 0.1,
-            "cmd_cap": PUSH_REWARD_CMD_CAP,
-        },
+        params={"command_name": "twist", "target_pitch": 0.262, "std": 0.1},
     )
     # Heading command DISABLED (straight-line focus), but we hold the heading so it
     # doesn't drift: heading_hold rewards the yaw ANGLE staying near the spawn
@@ -583,14 +569,12 @@ def make_env_cfg(
     command.rel_heading_envs = 0.0
     command.heading_command = False  # RelativeHeadingVelocityCommand handles heading internally
     command.ranges.heading = None    # must be None when heading_command=False
-    # cmd_x semantics: 0=coast, >0=push to accelerate, <0=brake to stop. This is
-    # the source recipe's starting range (known to train); the command_vel
-    # curriculum below widens its top end to the Arena's sweep.
+    # cmd_x semantics: 0=coast, >0=push to accelerate, <0=brake to stop. The Arena
+    # sweeps 0.30-2.00 m/s and keeps the best time, but the robot's measured top
+    # push is ~0.6-0.7 (3.10-3.14 s at 0.6-0.7, falling from 0.8 up) -- commanding
+    # above it buys nothing. Training above 0.6 broke learning in two separate
+    # runs, with and without a curriculum widening toward 2.00.
     command.ranges.lin_vel_x = (-0.5, 0.6)
-    if play:
-        # Play has no training steps to advance the command_vel curriculum below;
-        # command the Arena's full sweep directly (arena/events/roller-sprint-2m.toml).
-        command.ranges.lin_vel_x = (-0.5, 2.0)
     command.ranges.lin_vel_y = (0.0, 0.0)
     # ang_vel_z range is the clip limit for cmd[2] = heading error (rad).
     # Set to 0 → cmd[2] is always 0 → no turning demand (straight-line focus).
@@ -603,32 +587,7 @@ def make_env_cfg(
 
     # === CURRICULUM ===
     del cfg.curriculum["terrain_levels"]
-
-    if play:
-        # No training steps in play mode to advance the curriculum below, and env
-        # construction's own reset (step 0) would otherwise immediately re-apply
-        # its stage 0 and stomp the play override above back to (-0.5, 0.6) —
-        # pinning any loaded checkpoint below iteration 2500 to the wrong range.
-        # Drop the term entirely; play keeps the full (-0.5, 2.0) range set above.
-        del cfg.curriculum["command_vel"]
-    else:
-        # Jumping the push command straight to the Arena's sweep (0.30-2.00 m/s)
-        # from iteration 0 broke training (measured on HF Jobs: stable to
-        # iteration 150, falling constantly from iteration 250 on, unrecovered at
-        # iteration 1000). Start from the source recipe's range instead and widen
-        # only its top end in stages; the last stage is the Arena's top command.
-        cfg.curriculum["command_vel"] = CurriculumTermCfg(
-            func=mdp.commands_vel,
-            params={
-                "command_name": "twist",
-                "velocity_stages": [
-                    {"step": 0 * 24,    "lin_vel_x": (-0.5, 0.6)},
-                    {"step": 1000 * 24, "lin_vel_x": (-0.5, 1.0)},
-                    {"step": 1750 * 24, "lin_vel_x": (-0.5, 1.5)},
-                    {"step": 2500 * 24, "lin_vel_x": (-0.5, 2.0)},
-                ],
-            },
-        )
+    del cfg.curriculum["command_vel"]
 
     # action_rate penalty raised (-0.5/-0.8/-1.0 -> -1.0/-1.5/-2.0) for a CALMER
     # gait: this is the main "less movement" lever — it penalises fast/large action
