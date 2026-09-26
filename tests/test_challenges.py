@@ -72,6 +72,16 @@ def test_walking_training_reaches_the_top_of_the_sweep(folder):
     assert lin_vel_x[1] >= event.sweep.hi
 
 
+def test_the_roller_trains_with_the_arenas_free_wheels():
+    # The Arena's roller model's wheel bearings are frictionless (frictionloss=0.0
+    # in robot_allcollisions_rollers.xml's passive_joint default); a policy trained
+    # against added bearing friction breaks once raced there (see roller_sprint_2m/env.py).
+    env = importlib.import_module("microduck_challenges.roller_sprint_2m.env")
+    cfg = env.make_env_cfg()
+    assert "randomize_wheel_friction" not in cfg.events
+    assert "wheel_friction" not in cfg.curriculum
+
+
 @pytest.mark.parametrize("folder", CHALLENGES)
 def test_the_task_is_registered(folder):
     assert _contract(folder).task in list_tasks()

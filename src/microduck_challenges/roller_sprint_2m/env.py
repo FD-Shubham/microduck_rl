@@ -21,8 +21,9 @@ sim2real machinery, and updated for the NEW roller model:
     --new-cmd-obs path. Symmetry OFF (SYMMETRY_CFG is hardcoded for the old
     51D layout).
   - DR/noise/delays matched to the velocity env's FIXED (non-accumulating,
-    per-env-verified) versions; wheel-bearing frictionloss DR kept
-    (dr.dof_frictionloss on the passive wheels + existing curriculum).
+    per-env-verified) versions. Wheel-bearing frictionloss DR was REMOVED: the
+    Arena's roller model's wheels are frictionless, and training against added
+    bearing friction breaks the policy once raced there.
 
 Task design (the roller recipe):
   cmd_x semantics: 0 = coast, >0 = push to accelerate, <0 = brake. The Arena
@@ -48,7 +49,6 @@ ENABLE_HEAD_COM_RANDOMIZATION        = True
 ENABLE_MASS_INERTIA_RANDOMIZATION    = True
 ENABLE_JOINT_FRICTION_RANDOMIZATION  = True   # BAM friction budget per-env (legs)
 ENABLE_ARMATURE_RANDOMIZATION        = True   # legs only — NOT the wheel bearings
-ENABLE_WHEEL_FRICTION_RANDOMIZATION  = True   # bearing frictionloss on passive wheels
 ENABLE_VELOCITY_PUSHES               = True
 ENABLE_IMU_ORIENTATION_RANDOMIZATION = True   # obs-level per-env rotation
 ENABLE_ENCODER_BIAS                  = True
@@ -407,19 +407,12 @@ def make_env_cfg(
 
     cfg.events["reset_base"].params["pose_range"]["z"] = (0.1335, 0.1435)
 
-    # Wheel-bearing friction DR: real bearings have a little drag; the XML keeps
-    # frictionloss=0 for trainability and the curriculum ramps it in. mjlab 1.3.0
-    # stock dr op (operation="abs" writes the value directly; non-accumulating).
-    if ENABLE_WHEEL_FRICTION_RANDOMIZATION:
-        cfg.events["randomize_wheel_friction"] = EventTermCfg(
-            func=dr.dof_frictionloss,
-            mode="reset",
-            params={
-                "asset_cfg": SceneEntityCfg("robot", joint_names=(r"^passive_.*wheel",)),
-                "operation": "abs",
-                "ranges": (0.000, 0.000),  # ramped up by wheel_friction_curriculum
-            },
-        )
+    # No wheel-bearing friction DR: the Arena's roller model's wheels are
+    # frictionless (frictionloss="0.0" in robot_allcollisions_rollers.xml's
+    # passive_joint default). A 3000-iteration reference run that ramped bearing
+    # frictionloss in from iteration 2000 stayed fast and consistent (2.99-3.22 s,
+    # 5/5 seeds) through checkpoint 2000, then went erratic from checkpoint 2250
+    # on (40 s 0/5, 17.7 s, 3.5 s, 24.2 s 3/5) once raced on the Arena's free wheels.
 
     # ── DR matched to the velocity env's FIXED versions ───────────────────────
     if ENABLE_COM_RANDOMIZATION:
@@ -466,8 +459,8 @@ def make_env_cfg(
         )
 
     if ENABLE_ARMATURE_RANDOMIZATION:
-        # Legs/head only — the wheel bearings' tiny armature is excluded (its DR
-        # is the frictionloss event above).
+        # Legs/head only — the wheel bearings' tiny armature is excluded; the
+        # Arena's wheels are frictionless and get no DR at all (see above).
         cfg.events["randomize_armature"] = EventTermCfg(
             func=dr.joint_armature,
             mode="reset",
@@ -605,25 +598,6 @@ def make_env_cfg(
             ],
         },
     )
-
-    if ENABLE_WHEEL_FRICTION_RANDOMIZATION:
-        # Delayed + softened ramp: the previous schedule started adding bearing
-        # drag at iter 750 — right when wheel_speed peaked — and reached 0.003,
-        # which (with the heading ramp below) pushed the policy off skating into
-        # a heading-farming local optimum. Keep the wheels free until skating is
-        # robust, then add gentle, realistic drag.
-        cfg.curriculum["wheel_friction"] = CurriculumTermCfg(
-            func=microduck_mdp.wheel_friction_curriculum,
-            params={
-                "event_name": "randomize_wheel_friction",
-                "ranges_stages": [
-                    {"step":    0 * 24,  "ranges": (0.0000, 0.0000)},
-                    {"step": 2000 * 24,  "ranges": (0.0005, 0.0005)},
-                    {"step": 3500 * 24,  "ranges": (0.0010, 0.0010)},
-                    {"step": 5000 * 24,  "ranges": (0.0015, 0.0015)},
-                ],
-            },
-        )
 
     # (heading_tracking_weight curriculum removed — heading is disabled while we
     # focus on straight-line skating. Re-add together with the reward above.)
