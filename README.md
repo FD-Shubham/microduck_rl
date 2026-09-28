@@ -10,6 +10,21 @@ working training environment: train it unchanged and the robot competes.
 | hill_climb_1m5 | hill-climb-1m5 | Mjlab-HillClimb1m5-MicroDuck |
 | roller_sprint_2m | roller-sprint-2m | Mjlab-RollerSprint2m-MicroDuck |
 
+## The workshop
+
+Each challenge's page on the Arena has a **Train my robot** button with one line to copy:
+
+```bash
+uv run https://pollen-robotics-microduck-arena.hf.space/workshop.py sprint-2m
+```
+
+It works in the clone you run it in (or clones this repo next to you) and opens
+the workshop in your browser: Preflight, Train (on your NVIDIA GPU, or on
+Hugging Face Jobs without one), Test (the Arena's own evaluator, on your
+machine), Publish (to your Hugging Face account), then back to the Arena to
+enter it. From a clone, `uv run --group workshop workshop` lists the challenges
+and `uv run --group workshop workshop sprint-2m` opens one.
+
 ## Train from a shell
 
 Needs Python 3.12 and `uv`. Training needs an NVIDIA GPU, or Hugging Face Jobs.

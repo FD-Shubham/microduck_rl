@@ -131,6 +131,13 @@ def test_the_event_is_open_on_the_installed_arena(folder):
     assert event.status == "open", f"{folder} trains for {event.id}, which is {event.status}"
 
 
+@pytest.mark.parametrize("folder", sorted(CHALLENGES))
+def test_the_kind_is_the_events(folder):
+    """The Space refuses a manifest whose kind is not its event's; publish writes the challenge's."""
+    contract = _contract(folder)
+    assert contract.kind == load_event(contract.event).kind
+
+
 @pytest.mark.parametrize("folder", CHALLENGES)
 def test_the_robot_matches_the_events_rig(folder):
     env = importlib.import_module(f"microduck_challenges.{folder}.env")
