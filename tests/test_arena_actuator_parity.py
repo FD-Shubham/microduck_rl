@@ -2,12 +2,6 @@
 numbers and math, so the two can never silently drift apart.
 
 This is the only environment with arena, bam and torch installed together.
-Until the Arena's 0.3.0 wheel is published, run against the arena-bam
-worktree explicitly:
-
-    uv run --no-config --frozen --group workshop \\
-        --with-editable ~/Projects/HuggingFace/microduck-arena/.claude/worktrees/arena-bam \\
-        pytest tests/test_arena_actuator_parity.py -q
 
 If a vendored number or formula here diverges from bam, the fix belongs in
 the Arena (arena/actuator.py), not in this test.
