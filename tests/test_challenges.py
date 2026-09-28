@@ -3,8 +3,10 @@
 import importlib
 import math
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+import torch
 from mjlab.tasks.registry import list_tasks
 
 import microduck_challenges  # noqa: F401  (registers every task)
@@ -14,6 +16,7 @@ from mjlab_microduck.robot.microduck_constants import (
     MICRODUCK_WALK_ROBOT_CFG,
     MICRODUCK_WALK_ROLLERS_ROBOT_CFG,
 )
+from mjlab_microduck.tasks import mdp as microduck_mdp
 
 # folder, and for each exposed knob: (reward term whose weight it sets, value to try).
 CHALLENGES = {
@@ -70,6 +73,41 @@ def test_walking_training_reaches_the_top_of_the_sweep(folder):
     lin_vel_x = cfg.commands["twist"].ranges.lin_vel_x
     event = load_event(_contract(folder).event)
     assert lin_vel_x[1] >= event.sweep.hi
+
+
+@pytest.mark.parametrize("folder", ["sprint_2m", "hill_climb_1m5"])
+def test_walking_races_train_to_hold_their_heading(folder):
+    # The Arena commands yaw 0 and never tells the actor its heading, so a drift
+    # into the lane's wall is only priced by heading_hold; the critic sees what
+    # it prices, the actor only what the Arena feeds it.
+    cfg = importlib.import_module(f"microduck_challenges.{folder}.env").make_env_cfg()
+    assert cfg.rewards["heading_hold"].weight > 0
+    assert "heading_error" in cfg.observations["critic"].terms
+    assert "heading_error" not in cfg.observations["actor"].terms
+
+
+def _yaw_quat(yaws):
+    half = torch.tensor(yaws) / 2
+    zero = torch.zeros_like(half)
+    return torch.stack([half.cos(), zero, zero, half.sin()], dim=-1)
+
+
+@pytest.mark.parametrize("folder", ["sprint_2m", "hill_climb_1m5"])
+def test_the_critic_sees_the_heading_error_heading_hold_prices(folder):
+    env_module = importlib.import_module(f"microduck_challenges.{folder}.env")
+    robot = SimpleNamespace(data=SimpleNamespace(root_link_quat_w=_yaw_quat([0.3, 3.0, 1.0])))
+    env = SimpleNamespace(scene={"robot": robot}, num_envs=3, episode_length_buf=torch.tensor([1, 1, 1]))
+    microduck_mdp.heading_hold_reward(env)  # captures each spawn heading
+
+    robot.data.root_link_quat_w = _yaw_quat([0.5, -3.0, 2.0])
+    env.episode_length_buf = torch.tensor([40, 40, 0])  # the third just reset
+    error = env_module.heading_error(env).squeeze(-1)
+
+    # +0.2; across ±π the short way round (2π - 6), not -6; 0 on a fresh episode.
+    assert torch.allclose(error, torch.tensor([0.2, 2 * math.pi - 6.0, 0.0]), atol=1e-5)
+    env.episode_length_buf = torch.tensor([40, 40, 40])
+    reward = microduck_mdp.heading_hold_reward(env, std=0.4)
+    assert torch.allclose(reward[:2], torch.exp(-error[:2] ** 2 / 0.4**2), atol=1e-5)
 
 
 def test_the_roller_trains_with_the_arenas_free_wheels():

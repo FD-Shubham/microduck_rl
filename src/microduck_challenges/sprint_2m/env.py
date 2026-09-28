@@ -20,6 +20,9 @@ gait/feet terms, curriculum-ramped action-rate smoothing), with:
     command itself is held at its small initial range (no widening curriculum)
   - body_pose tracking infra kept intact but DISABLED (weight 0) so the obs
     slot stays alive for envs that use it
+  - heading_hold: the Arena commands yaw 0 and never tells the policy its
+    heading, so walking straight is priced on the yaw angle; the critic
+    alone sees that heading error
 """
 
 import math
@@ -89,7 +92,8 @@ ENCODER_BIAS_RANGE = (-0.015, 0.015)  # ±0.86° per-joint encoder offset (const
 BASE_ORIENTATION_MAX_PITCH_DEG = 10.0  # ±10° forward/backward tilt at episode start
 BASE_ORIENTATION_MAX_ROLL_DEG = 5.0  # ±5° side-to-side tilt at episode start
 
-from mjlab.envs import ManagerBasedRlEnvCfg
+import torch
+from mjlab.envs import ManagerBasedRlEnv, ManagerBasedRlEnvCfg
 from mjlab.envs.mdp import dr
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.managers import (
@@ -120,6 +124,20 @@ from mjlab_microduck import challenge
 from mjlab_microduck.robot.microduck_constants import MICRODUCK_WALK_ROBOT_CFG
 from mjlab_microduck.tasks import mdp as microduck_mdp
 from mjlab_microduck.tasks.symmetry import PpoWithSymmetryCfg, SYMMETRY_CFG
+
+
+def heading_error(env: ManagerBasedRlEnv) -> torch.Tensor:
+    """How far the trunk has turned from the heading heading_hold holds (rad, wrapped).
+
+    Critic-only: the Arena never tells the actor its heading. Reads the spawn
+    heading heading_hold_reward captures (env._heading_ref); zero on an
+    episode's first observation, which comes before that reward captures it.
+    """
+    w, x, y, z = env.scene["robot"].data.root_link_quat_w.unbind(-1)
+    yaw = torch.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+    reference = torch.where(env.episode_length_buf == 0, yaw, getattr(env, "_heading_ref", yaw))
+    error = yaw - reference
+    return torch.atan2(torch.sin(error), torch.cos(error)).unsqueeze(-1)
 
 
 def make_env_cfg(
@@ -277,6 +295,20 @@ def make_env_cfg(
     cfg.rewards["track_linear_velocity"].params["std"] = math.sqrt(0.1)
     cfg.rewards["track_angular_velocity"].weight = 2.0
     cfg.rewards["track_angular_velocity"].params["std"] = math.sqrt(0.5)
+
+    # Walk straight. The Arena commands yaw 0 and never tells the policy its
+    # heading, and nothing above prices a slow drift: at this std a 0.07 rad/s
+    # turn keeps 99% of track_angular_velocity. Unpriced, the first reference
+    # turned right 3–8°/s from 0.35 m/s on the Arena and walked into the
+    # lane's right wall. heading_hold prices the yaw ANGLE against the spawn
+    # heading (the roller's term and std): the policy cannot see its heading,
+    # but it can learn to null its gait's mean yaw rate. The critic sees the
+    # heading error (heading_error, below) so it can value what this term pays.
+    cfg.rewards["heading_hold"] = RewardTermCfg(
+        func=microduck_mdp.heading_hold_reward,
+        weight=1.0,
+        params={"std": 0.4, "asset_cfg": SceneEntityCfg("robot")},
+    )
 
     # Action smoothness: stage-0 value; the action_rate_weight curriculum below
     # ramps it -0.1 → -1.0 by iter 1500.
@@ -475,6 +507,8 @@ def make_env_cfg(
         func=mdp.base_lin_vel,
         scale=1.0,
     )
+    # Privileged too: the heading error heading_hold prices.
+    cfg.observations["critic"].terms["heading_error"] = ObservationTermCfg(func=heading_error)
 
     # Determine gravity/accelerometer term name based on flag
     gravity_term_name = "projected_gravity" if USE_PROJECTED_GRAVITY else "raw_accelerometer"
