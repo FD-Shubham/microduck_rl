@@ -845,8 +845,8 @@ wheels = [
 
 [[package]]
 name = "microduck-arena"
-version = "0.2.0"
-source = { url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.2.0-py3-none-any.whl" }
+version = "0.3.0"
+source = { url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.3.0-py3-none-any.whl" }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
@@ -859,7 +859,7 @@ dependencies = [
     { name = "websockets" },
 ]
 wheels = [
-    { url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.2.0-py3-none-any.whl", hash = "sha256:a25d8ecb962f24b6a948cf940029785eafd9d360373cb9731d0d2990c1f147c3" },
+    { url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.3.0-py3-none-any.whl", hash = "sha256:eba66718b8652af98e3bbb5d38656ca38026583f3582f51dd8575a9c09cf583e" },
 ]
 
 [package.metadata]
@@ -907,7 +907,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8.0" }]
-workshop = [{ name = "microduck-arena", url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.2.0-py3-none-any.whl" }]
+workshop = [{ name = "microduck-arena", url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.3.0-py3-none-any.whl" }]
 
 [[package]]
 name = "mjlab"
