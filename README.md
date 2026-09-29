@@ -12,7 +12,7 @@ working training environment: train it unchanged and the robot competes.
 
 ## The workshop
 
-Each challenge's page on the Arena has a **Train my robot** button with one line to copy:
+Each challenge's page on the Arena has a **Train my own robot** button with one line to copy:
 
 ```bash
 uv run https://pollen-robotics-microduck-arena.hf.space/workshop.py sprint-2m
