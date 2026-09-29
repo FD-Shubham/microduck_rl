@@ -21,9 +21,10 @@ uv run https://pollen-robotics-microduck-arena.hf.space/workshop.py sprint-2m
 It works in the clone you run it in (or clones this repo next to you) and opens
 the workshop in your browser: Preflight, Train (on your NVIDIA GPU, or on
 Hugging Face Jobs without one), Test (the Arena's own evaluator, on your
-machine), Publish (to your Hugging Face account), then back to the Arena to
-enter it. From a clone, `uv run --group workshop workshop` lists the challenges
-and `uv run --group workshop workshop sprint-2m` opens one.
+machine), then Publish, which publishes the policy to your Hugging Face account
+**and enters** it on the Arena, and opens its result. From a clone,
+`uv run --group workshop workshop` lists the challenges and
+`uv run --group workshop workshop sprint-2m` opens one.
 
 ## Train from a shell
 
@@ -58,10 +59,16 @@ bring them back before publishing:
 uv run hf download <that repo> --local-dir logs/rsl_rl
 ```
 
-Then `uv run publish --run logs/rsl_rl/<folder>/<run> --repo <you>/<name> --no-private`
-and paste the repo on the challenge's page on the Arena (`publish` creates the
-Hub repo private by default; the Arena reads with its own token, so it needs
-`--no-private` to see it).
+Then publish and enter it in one command:
+
+```bash
+uv run publish --run logs/rsl_rl/<folder>/<run> --repo <you>/microduck-<name> --no-private --enter
+```
+
+It uploads the policy to your Hugging Face account, enters it on the
+challenge's event on the Arena, and prints its time and the page of its result.
+`publish` creates a new Hub repo private by default, and the Arena reads public
+repos only: hence `--no-private`.
 
 ## Tests
 
