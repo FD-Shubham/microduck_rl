@@ -1,4 +1,4 @@
-"""Registers the MicroDuck Got a Talent's task with mjlab, and its contract (challenge.toml) with publish."""
+"""Registers MicroDuck Got a Talent's task with mjlab, and its contract (challenge.toml) with publish."""
 
 from mjlab.tasks.registry import register_mjlab_task
 

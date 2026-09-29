@@ -1,7 +1,7 @@
-"""The MicroDuck Got a Talent's training environment: Microduck sits and stands on command.
+"""MicroDuck Got a Talent's training environment: Microduck sits and stands on command.
 
 A complete copy of microduck_rl's sitstand task (microduck_sitstand_env_cfg.py,
-the config behind alpha_sitstand), made the MicroDuck Got a Talent's own: flat ground
+the config behind alpha_sitstand), made MicroDuck Got a Talent's own: flat ground
 only, the Arena's contact solver, and three reward weights a novice tunes read
 from challenge.toml ([params]). The Arena plays each entry's timeline.json on a
 stage: twist.vx is the sit flag (1 = sit, 0 = stand), head is 4 deltas from the
@@ -190,7 +190,7 @@ from mjlab_microduck.tasks.symmetry import PpoWithSymmetryCfg, SYMMETRY_CFG
 def make_env_cfg(
     play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
-    """The MicroDuck Got a Talent's training environment."""
+    """MicroDuck Got a Talent's training environment."""
 
     # The knobs a novice tunes, from challenge.toml beside this file.
     knobs = challenge.params(__file__)

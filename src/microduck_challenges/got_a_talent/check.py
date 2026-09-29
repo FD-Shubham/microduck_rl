@@ -1,21 +1,21 @@
 """Does a swag policy perform its timeline on the Arena's stage?
 
-    .venv/bin/python -m microduck_challenges.swag_contest.check policy.onnx [--timeline FILE]
+    uv run --frozen --group workshop python -m microduck_challenges.swag_contest.check policy.onnx [--timeline FILE]
 
 Plays the stage the way the Arena scores an entry (arena.evaluate, with this
 folder's timeline.json by default), then checks the performance against the
 timeline, keyframe by keyframe:
 
 - no fall, by the event's own rule;
-- after each change of the sit flag (twist.vx) to 1: seated within 1.5 s, and
-  seated until the flag changes again;
-- at the start and after each change to 0: standing upright within 1.5 s, and
-  standing until the flag changes again;
+- at the start, and after each change of the sit flag (twist.vx): seated
+  within 1.5 s when it is now 1, or standing upright within 1.5 s when it is
+  now 0, and held until the flag changes again;
 - every keyframe held 2 s or more: each head joint within 0.25 rad of the
   default pose plus the keyframe's head command, over the hold's last 0.5 s.
 
 Seated and standing are the Arena's own readings (arena.stage). Prints a line
-per keyframe; exits 1 when anything fails.
+per keyframe; exits 1 when anything fails, including a performance that did
+not play to the end.
 """
 
 import argparse
@@ -27,8 +27,8 @@ from arena import stage
 from arena.constants import CTRL_DT, DEFAULT_POSE, JOINT_NAMES
 from arena.evaluate import evaluate
 from arena.manifest import load_event
-from arena.policy import load_policy
-from arena.timeline import Timeline, load_timeline
+from arena.policy import PolicyError, load_policy
+from arena.timeline import Timeline, TimelineError, load_timeline
 
 EVENT = "swag-contest"
 TIMELINE = Path(__file__).with_name("timeline.json")
@@ -108,9 +108,14 @@ def main(argv=None) -> int:
     parser.add_argument("--timeline", default=str(TIMELINE))
     args = parser.parse_args(argv)
     event = load_event(EVENT)
-    timeline = load_timeline(Path(args.timeline), event.time_limit_s)
-    result = evaluate(event, load_policy(Path(args.onnx)), timeline)
+    try:
+        timeline = load_timeline(Path(args.timeline), event.time_limit_s)
+        result = evaluate(event, load_policy(Path(args.onnx)), timeline)
+    except (TimelineError, PolicyError) as exc:
+        print(f"{exc}", file=sys.stderr)
+        return 1
     lines, passed, head_error = report(result.trace, timeline, event.termination)
+    passed = passed and result.seeds_finished == 1
     print("\n".join(lines))
     print(f"{'PASS' if passed else 'FAIL'}: largest head error {head_error:.2f} rad")
     return 0 if passed else 1

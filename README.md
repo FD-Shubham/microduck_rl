@@ -15,7 +15,7 @@ MicroDuck Got a Talent is a performance, not a race: the Arena plays the entry's
 `got_a_talent/timeline.json` is Pollen's: `twist[0]` is the sit flag (1 sits,
 0 stands) and `head` is 4 deltas in radians from the default pose (neck_pitch,
 head_pitch, head_yaw, head_roll). Check a policy against a timeline with
-`uv run --group workshop python -m microduck_challenges.got_a_talent.check policy.onnx [--timeline FILE]`,
+`uv run --frozen --group workshop python -m microduck_challenges.got_a_talent.check policy.onnx [--timeline FILE]`,
 and publish the timeline with the policy: `uv run publish … --timeline src/microduck_challenges/got_a_talent/timeline.json`.
 
 ## The workshop

@@ -114,6 +114,18 @@ def test_the_swag_reads_what_a_timeline_carries(cfg):
     assert actor["body_command"].params == {"dim": 6}
 
 
+def test_checks_head_joint_order_matches_head_pose_trackings_own(cfg):
+    """check.HEAD_JOINTS reads the head command's 4 dims as
+    [neck_pitch, head_pitch, head_yaw, head_roll]; that must be the same order
+    head_pose_tracking's own find_joints_by_actuator_names(_NECK_JOINT_PATTERNS)
+    resolves them in, given this robot's actual joint declaration order."""
+    from microduck_challenges.swag_contest.check import HEAD_JOINTS
+
+    entity = cfg.scene.entities["robot"].build()
+    _, names = entity.find_joints_by_actuator_names(microduck_mdp._NECK_JOINT_PATTERNS)
+    assert [JOINT_NAMES[i] for i in HEAD_JOINTS] == names
+
+
 TIMELINE = Path(microduck_challenges.__file__).parent / "swag_contest" / "timeline.json"
 
 
@@ -217,3 +229,14 @@ def test_check_plays_the_stage_and_fails_a_walker(capsys):
     out = capsys.readouterr().out.splitlines()
     assert len(out) == 9 + 2  # a line per keyframe, the fall line, the verdict
     assert out[-1].startswith("FAIL: largest head error ")
+
+
+def test_check_refuses_a_malformed_timeline(tmp_path, capsys):
+    """main() must fail cleanly, like the Arena's own CLI, instead of raising."""
+    from microduck_challenges.swag_contest import check
+
+    bad = tmp_path / "timeline.json"
+    bad.write_text("{nope")
+    assert check.main(["policy.onnx", "--timeline", str(bad)]) == 1
+    err = capsys.readouterr().err
+    assert "timeline.json" in err and "not a JSON file" in err
