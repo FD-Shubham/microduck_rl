@@ -2,13 +2,17 @@
 
 import importlib
 import math
+from pathlib import Path
 
+import numpy as np
 import pytest
 
 import microduck_challenges  # noqa: F401  (registers every task)
-from arena.constants import DECIMATION
+from arena.assets import ASSET_ROOT
+from arena.constants import CTRL_DT, DECIMATION, DEFAULT_POSE, JOINT_NAMES, TRACE_WIDTH
 from arena.course import compile_course
 from arena.manifest import load_event
+from arena.timeline import Timeline, load_timeline
 from mjlab_microduck.tasks import mdp as microduck_mdp
 
 
@@ -108,3 +112,108 @@ def test_the_swag_reads_what_a_timeline_carries(cfg):
     assert actor["head_command"].params == {"command_name": "head_pose"}
     assert actor["body_command"].func is microduck_mdp.zero_command_padding
     assert actor["body_command"].params == {"dim": 6}
+
+
+TIMELINE = Path(microduck_challenges.__file__).parent / "swag_contest" / "timeline.json"
+
+
+def test_the_reference_timeline_plays_on_the_arena():
+    timeline = load_timeline(TIMELINE, load_event("swag-contest").time_limit_s)
+    assert timeline.duration_s == 20.0
+    assert len(timeline.times) == 9
+
+
+def test_the_reference_timeline_stays_inside_what_training_saw(cfg):
+    timeline = load_timeline(TIMELINE, load_event("swag-contest").time_limit_s)
+    final = cfg.curriculum["head_pose_range"].params["range_stages"][-1]["ranges"]
+    dwell = cfg.commands["twist"].resampling_time_range[0]
+    head_every = cfg.commands["head_pose"].resampling_time_range[0]
+    flags = [c[0] for c in timeline.commands]
+    assert set(flags) <= {0.0, 1.0}
+    for command in timeline.commands:
+        assert command[1:3] == (0.0, 0.0) and command[7:] == (0.0,) * 6
+        for value, (_, hi) in zip(command[3:7], final):
+            assert abs(value) <= 0.4 * hi
+    changes = [t for i, t in enumerate(timeline.times) if i and flags[i] != flags[i - 1]]
+    bounds = changes + [timeline.duration_s]
+    assert all(b - a >= dwell for a, b in zip(bounds, bounds[1:]))
+    head_changes = [t for i, t in enumerate(timeline.times)
+                    if i and timeline.commands[i][3:7] != timeline.commands[i - 1][3:7]]
+    assert all(b - a >= head_every for a, b in zip(head_changes, head_changes[1:]))
+
+
+STAND = (0.0,) * 13
+SIT_LEFT = (1.0, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0) + (0.0,) * 6
+EIGHT_S = Timeline(8.0, (0.0, 2.0, 5.0), (STAND, SIT_LEFT, STAND))
+
+
+def _trace(z_at, yaw_at=lambda t: 0.0, tilt_at=lambda t: 0.0, duration_s=8.0):
+    """A synthetic performance: trunk height, head yaw delta and roll tilt as functions of time."""
+    n = round(duration_s / CTRL_DT)
+    trace = np.zeros((n, TRACE_WIDTH), dtype=np.float32)
+    for i in range(n):
+        t = i * CTRL_DT
+        half = np.radians(tilt_at(t)) / 2
+        trace[i, 2] = z_at(t)
+        trace[i, 3:7] = (np.cos(half), np.sin(half), 0.0, 0.0)
+        trace[i, 7:] = DEFAULT_POSE
+        trace[i, 7 + JOINT_NAMES.index("head_yaw")] += yaw_at(t)
+    return trace
+
+
+def _seated_between(a, b):
+    return lambda t: 0.06 if a <= t < b else 0.115
+
+
+def _report(trace):
+    from microduck_challenges.swag_contest import check
+
+    return check.report(trace, EIGHT_S, load_event("swag-contest").termination)
+
+
+def test_a_performance_that_follows_its_timeline_passes():
+    lines, passed, head = _report(_trace(_seated_between(3.0, 5.8), yaw_at=lambda t: 0.5 if 2.3 <= t < 5.0 else 0.0))
+    assert passed, lines
+    assert len(lines) == 4  # three keyframes, then the fall line
+    assert head < 0.01
+
+
+def test_a_sit_never_reached_fails():
+    lines, passed, _ = _report(_trace(lambda t: 0.115))
+    assert not passed
+    assert "sit: not reached within 1.5 s" in lines[1]
+
+
+def test_a_sit_reached_late_fails():
+    lines, passed, _ = _report(_trace(_seated_between(3.8, 5.8)))
+    assert not passed
+    assert "sit: not reached within 1.5 s" in lines[1]
+
+
+def test_a_sit_left_early_fails():
+    lines, passed, _ = _report(_trace(_seated_between(3.0, 4.0)))
+    assert not passed
+    assert "left at 4.00 s" in lines[1]
+
+
+def test_a_head_far_from_its_command_fails():
+    lines, passed, head = _report(_trace(_seated_between(3.0, 5.8), yaw_at=lambda t: 0.9 if 2.3 <= t < 5.0 else 0.0))
+    assert not passed
+    assert head == pytest.approx(0.4, abs=1e-3)
+    assert "head: off by 0.40 rad" in lines[1]
+
+
+def test_a_fall_fails():
+    lines, passed, _ = _report(_trace(_seated_between(3.0, 5.8), tilt_at=lambda t: 80.0 if t >= 6.0 else 0.0))
+    assert not passed
+    assert lines[-1] == "fell at 6.30 s"
+
+
+def test_check_plays_the_stage_and_fails_a_walker(capsys):
+    """End to end on the Arena: the reference walker does not sit."""
+    from microduck_challenges.swag_contest import check
+
+    assert check.main([str(ASSET_ROOT / "policies" / "BEST_alpha_walking.onnx")]) == 1
+    out = capsys.readouterr().out.splitlines()
+    assert len(out) == 9 + 2  # a line per keyframe, the fall line, the verdict
+    assert out[-1].startswith("FAIL: largest head error ")

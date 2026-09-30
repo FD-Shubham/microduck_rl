@@ -10,6 +10,14 @@ working training environment: train it unchanged and the robot competes.
 | hill_climb_1m5 | hill-climb-1m5 | Mjlab-HillClimb1m5-MicroDuck |
 | roller_sprint_2m | roller-sprint-2m | Mjlab-RollerSprint2m-MicroDuck |
 
+MicroDuck Got a Talent is a performance, not a race: the Arena plays the entry's
+`timeline.json` for up to 20 s on an open stage, and visitors vote.
+`got_a_talent/timeline.json` is Pollen's: `twist[0]` is the sit flag (1 sits,
+0 stands) and `head` is 4 deltas in radians from the default pose (neck_pitch,
+head_pitch, head_yaw, head_roll). Check a policy against a timeline with
+`uv run --group workshop python -m microduck_challenges.got_a_talent.check policy.onnx [--timeline FILE]`,
+and publish the timeline with the policy: `uv run publish … --timeline src/microduck_challenges/got_a_talent/timeline.json`.
+
 ## The workshop
 
 Each challenge's page on the Arena has a **Train my own robot** button with one line to copy:
