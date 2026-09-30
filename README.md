@@ -18,13 +18,14 @@ Each challenge's page on the Arena has a **Train my own robot** button with one 
 uv run https://pollen-robotics-microduck-arena.hf.space/workshop.py sprint-2m
 ```
 
-It works in the clone you run it in (or clones this repo next to you) and opens
-the workshop in your browser: Preflight, Train (on your NVIDIA GPU, or on
-Hugging Face Jobs without one), Test (the Arena's own evaluator, on your
-machine), then Publish, which publishes the policy to your Hugging Face account
-**and enters** it on the Arena, and opens its result. From a clone,
-`uv run --group workshop workshop` lists the challenges and
-`uv run --group workshop workshop sprint-2m` opens one.
+It works in the clone you run it in (or clones this repo next to you) and opens the workshop in your
+browser, on that challenge. Its home says what is set up (Hugging Face Jobs billing, your fork, an
+NVIDIA GPU) and lists the challenges. A challenge's page says which files to change, commits them
+before each training, trains on your NVIDIA GPU or on Hugging Face Jobs, and keeps one ticket per
+training: every checkpoint is evaluated with the Arena's own rules as it arrives. A training's page
+replays any checkpoint, and **Publish and compete** publishes the policy to your Hugging Face account
+**and enters** it on the Arena, then opens its result. From a clone, `uv run --group workshop workshop`
+opens the home and `uv run --group workshop workshop sprint-2m` opens one challenge.
 
 ## Train from a shell
 
