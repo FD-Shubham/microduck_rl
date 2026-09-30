@@ -61,8 +61,8 @@ mjlab-microduck = { git = "https://github.com/pollen-robotics/microduck_rl", bra
 # it to huggingface.co; an HF job gets it as a secret), because a release asset
 # on the Arena's private GitHub repo cannot be downloaded by uv even with a
 # token. When that repo goes public this becomes
-# https://github.com/pollen-robotics/microduck-arena/releases/download/v0.3.1/microduck_arena-0.3.1-py3-none-any.whl
-microduck-arena = { url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.3.1-py3-none-any.whl" }
+# https://github.com/pollen-robotics/microduck-arena/releases/download/v0.4.0/microduck_arena-0.4.0-py3-none-any.whl
+microduck-arena = { url = "https://huggingface.co/pollen-robotics/microduck-arena-wheels/resolve/main/microduck_arena-0.4.0-py3-none-any.whl" }
 # Official BAM actuator model. Pinned to the exact commit microduck_rl's own
 # uv.lock uses: the `mjlab_frictionloss` branch moved (now 57d13ea) and
 # mjlab_microduck no longer imports against its head (FrictionDRBamActuatorCfg
