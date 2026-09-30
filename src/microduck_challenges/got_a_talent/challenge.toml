@@ -1,7 +1,7 @@
-# The Swag Contest: walk the 2 m lane at 0.25 m/s with style; visitors vote.
+# MicroDuck Got a Talent: walk the 2 m lane at 0.25 m/s with style; visitors vote.
 # Nothing is timed. Make the walk yours.
-event = "swag-contest"
-task  = "Mjlab-SwagContest-MicroDuck"
+event = "got-a-talent"
+task  = "Mjlab-GotATalent-MicroDuck"
 kind  = "perpetual"
 
 [recipe]                  # the first training, as is

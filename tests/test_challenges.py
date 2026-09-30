@@ -25,7 +25,7 @@ CHALLENGES = {
         "upright_reward": ("upright", 1.3),
         "step_reward": ("air_time", 4.1),
     },
-    "swag_contest": {
+    "got_a_talent": {
         "step_reward": ("air_time", 5.2),
         "upright_reward": ("upright", 0.9),
         "head_reward": ("head_pose_tracking", 2.6),
@@ -49,7 +49,7 @@ def _contract(folder):
     return challenge.load(ROOT / folder / "tasks.py")
 
 
-# The challenges whose Arena event races a commanded speed; swag is judged on style.
+# The challenges whose Arena event races a commanded speed; MicroDuck Got a Talent is judged on style.
 RACES = ["sprint_2m", "hill_climb_1m5", "roller_sprint_2m"]
 
 

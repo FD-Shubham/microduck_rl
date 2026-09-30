@@ -1,7 +1,7 @@
-"""The Swag Contest's training environment: Microduck walking on flat ground.
+"""The MicroDuck Got a Talent's training environment: Microduck walking on flat ground.
 
 A complete copy of microduck_rl's velocity task (microduck_velocity_env_cfg.py),
-made the swag contest's own: flat ground only, and the three rewards a novice
+made the MicroDuck Got a Talent's own: flat ground only, and the three rewards a novice
 tunes read from challenge.toml ([params]). Everything here is yours to change;
 the robot (MICRODUCK_WALK_ROBOT_CFG) and the reward functions (microduck_mdp)
 come from mjlab_microduck and are not edited here.
@@ -128,7 +128,7 @@ from mjlab_microduck.tasks.symmetry import PpoWithSymmetryCfg, SYMMETRY_CFG
 def make_env_cfg(
     play: bool = False,
 ) -> ManagerBasedRlEnvCfg:
-    """The swag contest's training environment."""
+    """The MicroDuck Got a Talent's training environment."""
 
     # The knobs a novice tunes, from challenge.toml beside this file.
     knobs = challenge.params(__file__)
@@ -681,7 +681,7 @@ def make_env_cfg(
         params={"command_name": "head_pose", "tau_s": 1.0},
     )
 
-    # Terrain: the swag contest's lane is flat.
+    # Terrain: the MicroDuck Got a Talent's lane is flat.
     cfg.scene.terrain.terrain_type = "plane"
     cfg.scene.terrain.terrain_generator = None
 
@@ -852,8 +852,8 @@ RL_CFG = RslRlOnPolicyRunnerCfg(
         symmetry_cfg=SYMMETRY_CFG if ENABLE_SYMMETRY else None,
     ),
     wandb_project="mjlab_microduck",
-    experiment_name="swag_contest",  # logs/rsl_rl/swag_contest/
-    run_name="swag_contest",
+    experiment_name="got_a_talent",  # logs/rsl_rl/got_a_talent/
+    run_name="got_a_talent",
     save_interval=250,
     num_steps_per_env=24,
     max_iterations=50_000,

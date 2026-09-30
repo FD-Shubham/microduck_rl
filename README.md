@@ -6,7 +6,7 @@ working training environment: train it unchanged and the robot competes.
 | Folder | Arena event | Task |
 |---|---|---|
 | sprint_2m | sprint-2m | Mjlab-Sprint2m-MicroDuck |
-| swag_contest | swag-contest | Mjlab-SwagContest-MicroDuck |
+| got_a_talent | got-a-talent | Mjlab-GotATalent-MicroDuck |
 | hill_climb_1m5 | hill-climb-1m5 | Mjlab-HillClimb1m5-MicroDuck |
 | roller_sprint_2m | roller-sprint-2m | Mjlab-RollerSprint2m-MicroDuck |
 
