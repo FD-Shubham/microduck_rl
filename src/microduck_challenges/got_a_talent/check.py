@@ -1,6 +1,6 @@
-"""Does a swag policy perform its timeline on the Arena's stage?
+"""Does a MicroDuck Got a Talent policy perform its timeline on the Arena's stage?
 
-    uv run --frozen --group workshop python -m microduck_challenges.swag_contest.check policy.onnx [--timeline FILE]
+    uv run --frozen --group workshop python -m microduck_challenges.got_a_talent.check policy.onnx [--timeline FILE]
 
 Plays the stage the way the Arena scores an entry (arena.evaluate, with this
 folder's timeline.json by default), then checks the performance against the
@@ -30,7 +30,7 @@ from arena.manifest import load_event
 from arena.policy import PolicyError, load_policy
 from arena.timeline import Timeline, TimelineError, load_timeline
 
-EVENT = "swag-contest"
+EVENT = "got-a-talent"
 TIMELINE = Path(__file__).with_name("timeline.json")
 REACH_S = 1.5
 HEAD_HOLD_S = 2.0
@@ -103,7 +103,8 @@ def report(trace, timeline: Timeline, termination) -> tuple[list[str], bool, flo
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="Check a swag policy's performance on the Arena's stage.")
+    parser = argparse.ArgumentParser(
+        description="Check a MicroDuck Got a Talent policy's performance on the Arena's stage.")
     parser.add_argument("onnx")
     parser.add_argument("--timeline", default=str(TIMELINE))
     args = parser.parse_args(argv)

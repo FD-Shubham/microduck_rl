@@ -1,4 +1,4 @@
-"""The swag trains in the Arena's physics, and reads the command a timeline carries."""
+"""MicroDuck Got a Talent trains in the Arena's physics, and reads the command a timeline carries."""
 
 import importlib
 import math
@@ -18,12 +18,12 @@ from mjlab_microduck.tasks import mdp as microduck_mdp
 
 @pytest.fixture(scope="module")
 def cfg():
-    return importlib.import_module("microduck_challenges.swag_contest.env").make_env_cfg()
+    return importlib.import_module("microduck_challenges.got_a_talent.env").make_env_cfg()
 
 
 @pytest.fixture(scope="module")
 def arena():
-    return compile_course(load_event("swag-contest"))
+    return compile_course(load_event("got-a-talent"))
 
 
 def _training_model(entity):
@@ -71,7 +71,7 @@ def _floor_contacts(model, skip):
     return sorted(out)
 
 
-def test_the_swag_collides_like_the_arena(cfg, arena):
+def test_got_a_talent_collides_like_the_arena(cfg, arena):
     # A sit puts the trunk and hips on the floor: training must collide with the
     # same robot geoms as the Arena's stage, or a seated trunk sinks in one and
     # not the other.
@@ -79,7 +79,7 @@ def test_the_swag_collides_like_the_arena(cfg, arena):
     assert _colliding(robot, skip={"world"}) == _colliding(arena, skip={"world", "course"})
 
 
-def test_the_swag_touches_the_floor_like_the_arena(cfg, arena):
+def test_got_a_talent_touches_the_floor_like_the_arena(cfg, arena):
     """Every robot geom meets the floor with the Arena's condim and friction.
     Robot-on-robot contacts are where the two differ: training gives its non-foot
     geoms condim 1 (FULL_COLLISION), so two of them touch without friction, and
@@ -90,19 +90,19 @@ def test_the_swag_touches_the_floor_like_the_arena(cfg, arena):
     assert _floor_contacts(robot, skip={"world"}) == _floor_contacts(arena, skip={"world", "course"})
 
 
-def test_the_swag_solves_contacts_like_the_arena(cfg, arena):
+def test_got_a_talent_solves_contacts_like_the_arena(cfg, arena):
     assert cfg.sim.mujoco.iterations == arena.opt.iterations
     assert cfg.sim.mujoco.ls_iterations == arena.opt.ls_iterations
     assert math.isclose(cfg.sim.mujoco.timestep, arena.opt.timestep)
     assert cfg.decimation == DECIMATION
 
 
-def test_the_swag_plays_on_after_a_fall_like_the_stage(cfg):
+def test_got_a_talent_plays_on_after_a_fall_like_the_stage(cfg):
     assert "fell_over" not in cfg.terminations
     assert "nan_state" in cfg.terminations
 
 
-def test_the_swag_reads_what_a_timeline_carries(cfg):
+def test_got_a_talent_reads_what_a_timeline_carries(cfg):
     """twist.vx is the sit flag, head_pose the 4 head deltas, body zeros: a
     keyframe's 13 numbers, in the 61-D observation's command slot."""
     assert isinstance(cfg.commands["twist"], microduck_mdp.SitStandCommandCfg)
@@ -119,24 +119,24 @@ def test_checks_head_joint_order_matches_head_pose_trackings_own(cfg):
     [neck_pitch, head_pitch, head_yaw, head_roll]; that must be the same order
     head_pose_tracking's own find_joints_by_actuator_names(_NECK_JOINT_PATTERNS)
     resolves them in, given this robot's actual joint declaration order."""
-    from microduck_challenges.swag_contest.check import HEAD_JOINTS
+    from microduck_challenges.got_a_talent.check import HEAD_JOINTS
 
     entity = cfg.scene.entities["robot"].build()
     _, names = entity.find_joints_by_actuator_names(microduck_mdp._NECK_JOINT_PATTERNS)
     assert [JOINT_NAMES[i] for i in HEAD_JOINTS] == names
 
 
-TIMELINE = Path(microduck_challenges.__file__).parent / "swag_contest" / "timeline.json"
+TIMELINE = Path(microduck_challenges.__file__).parent / "got_a_talent" / "timeline.json"
 
 
 def test_the_reference_timeline_plays_on_the_arena():
-    timeline = load_timeline(TIMELINE, load_event("swag-contest").time_limit_s)
+    timeline = load_timeline(TIMELINE, load_event("got-a-talent").time_limit_s)
     assert timeline.duration_s == 20.0
     assert len(timeline.times) == 9
 
 
 def test_the_reference_timeline_stays_inside_what_training_saw(cfg):
-    timeline = load_timeline(TIMELINE, load_event("swag-contest").time_limit_s)
+    timeline = load_timeline(TIMELINE, load_event("got-a-talent").time_limit_s)
     final = cfg.curriculum["head_pose_range"].params["range_stages"][-1]["ranges"]
     dwell = cfg.commands["twist"].resampling_time_range[0]
     head_every = cfg.commands["head_pose"].resampling_time_range[0]
@@ -178,9 +178,9 @@ def _seated_between(a, b):
 
 
 def _report(trace):
-    from microduck_challenges.swag_contest import check
+    from microduck_challenges.got_a_talent import check
 
-    return check.report(trace, EIGHT_S, load_event("swag-contest").termination)
+    return check.report(trace, EIGHT_S, load_event("got-a-talent").termination)
 
 
 def test_a_performance_that_follows_its_timeline_passes():
@@ -223,7 +223,7 @@ def test_a_fall_fails():
 
 def test_check_plays_the_stage_and_fails_a_walker(capsys):
     """End to end on the Arena: the reference walker does not sit."""
-    from microduck_challenges.swag_contest import check
+    from microduck_challenges.got_a_talent import check
 
     assert check.main([str(ASSET_ROOT / "policies" / "BEST_alpha_walking.onnx")]) == 1
     out = capsys.readouterr().out.splitlines()
@@ -233,7 +233,7 @@ def test_check_plays_the_stage_and_fails_a_walker(capsys):
 
 def test_check_refuses_a_malformed_timeline(tmp_path, capsys):
     """main() must fail cleanly, like the Arena's own CLI, instead of raising."""
-    from microduck_challenges.swag_contest import check
+    from microduck_challenges.got_a_talent import check
 
     bad = tmp_path / "timeline.json"
     bad.write_text("{nope")
