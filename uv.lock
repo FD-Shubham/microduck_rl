@@ -942,7 +942,7 @@ wheels = [
 [[package]]
 name = "mjlab-microduck"
 version = "0.1.0"
-source = { git = "https://github.com/pollen-robotics/microduck_rl?branch=challenge-recipe-publishing#721150d017f1368bfc5bff54c5e344b10a1eaec7" }
+source = { git = "https://github.com/pollen-robotics/microduck_rl?branch=challenge-recipe-publishing#5691f748aed8afc1bfc5999c7c099e42e3049255" }
 dependencies = [
     { name = "better-actuator-models" },
     { name = "huggingface-hub" },
