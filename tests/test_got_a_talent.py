@@ -240,3 +240,14 @@ def test_check_refuses_a_malformed_timeline(tmp_path, capsys):
     assert check.main(["policy.onnx", "--timeline", str(bad)]) == 1
     err = capsys.readouterr().err
     assert "timeline.json" in err and "not a JSON file" in err
+
+
+def test_the_manifest_says_what_the_policy_reads():
+    """publish writes this into every got-a-talent manifest: the sit flag and the head pose, never 'unused'."""
+    from mjlab_microduck import challenge as ch
+
+    import microduck_challenges  # noqa: F401 — registers every challenge's task
+
+    command = ch.for_task("Mjlab-GotATalent-MicroDuck").command
+    assert command["twist"].startswith("[sit flag")
+    assert "head_yaw" in command["head"]

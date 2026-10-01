@@ -32,8 +32,10 @@ NVIDIA GPU) and lists the challenges. A challenge's page says which files to cha
 before each training, trains on your NVIDIA GPU or on Hugging Face Jobs, and keeps one ticket per
 training: every checkpoint is evaluated with the Arena's own rules as it arrives. A training's page
 replays any checkpoint, and **Publish and compete** publishes the policy to your Hugging Face account
-**and enters** it on the Arena, then opens its result. From a clone, `uv run --group workshop workshop`
-opens the home and `uv run --group workshop workshop sprint-2m` opens one challenge.
+**and enters** it on the Arena, then opens its result. On MicroDuck Got a Talent, a training's page
+also edits `timeline.json`, your performance, and plays it with the checkpoint you pick. From a clone,
+`uv run --group workshop workshop` opens the home and `uv run --group workshop workshop sprint-2m`
+opens one challenge.
 
 ## Train from a shell
 
