@@ -10,6 +10,10 @@ working training environment: train it unchanged and the robot competes.
 | hill_climb_1m5 | hill-climb-1m5 | Mjlab-HillClimb1m5-MicroDuck |
 | roller_sprint_2m | roller-sprint-2m | Mjlab-RollerSprint2m-MicroDuck |
 
+Training with a coding agent (Claude Code, Codex, Cursor…)? Each challenge folder has an
+`AGENTS.md` that tells it which files to change, how to run and judge a training, and the
+challenge's rules; point the agent at it.
+
 MicroDuck Got a Talent is a performance, not a race: the Arena plays the entry's
 `timeline.json` for up to 20 s on an open stage, and visitors vote.
 `got_a_talent/timeline.json` is Pollen's: `twist[0]` is the sit flag (1 sits,
