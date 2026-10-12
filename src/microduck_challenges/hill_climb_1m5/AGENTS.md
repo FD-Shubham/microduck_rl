@@ -84,7 +84,6 @@ writing a reward term.
 ### Once per session
 
 ```bash
-export HF_TOKEN=$(cat ~/.cache/huggingface/token)   # every uv command needs it while the Arena wheel is private
 uv sync --group workshop
 nvidia-smi              # an NVIDIA GPU here trains locally; otherwise Hugging Face Jobs
 uv run hf auth whoami   # the account a job runs and bills under, and publish publishes to
@@ -244,7 +243,7 @@ fork, never `pollen-robotics`; the workshop's home sets that up).
   [pollen-robotics/microduck-arena](https://huggingface.co/spaces/pollen-robotics/microduck-arena).
   The board ranks every entered policy by score, then by finishes, then by who got there first.
   Read it live:
-  `curl -s -H "Authorization: Bearer $HF_TOKEN" https://pollen-robotics-microduck-arena.hf.space/api/events/hill-climb-1m5/leaderboard`
+  `curl -s https://pollen-robotics-microduck-arena.hf.space/api/events/hill-climb-1m5/leaderboard`
   (each row: `user`, `policy_name`, `score`, `seeds_finished`, `command_vx`). Use it to tell the
   user what a place takes, never to promise one.
 - Player points: +100 for a first publication in a challenge, +10 per publication (the first 3 per

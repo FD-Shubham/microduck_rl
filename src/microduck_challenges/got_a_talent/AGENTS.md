@@ -110,7 +110,6 @@ writing a reward term.
 ### Once per session
 
 ```bash
-export HF_TOKEN=$(cat ~/.cache/huggingface/token)   # every uv command needs it while the Arena wheel is private
 uv sync --group workshop
 nvidia-smi              # an NVIDIA GPU here trains locally; otherwise Hugging Face Jobs
 uv run hf auth whoami   # the account a job runs and bills under, and publish publishes to
@@ -281,7 +280,7 @@ fork, never `pollen-robotics`; the workshop's home sets that up).
 - The Arena is the Hugging Face Space
   [pollen-robotics/microduck-arena](https://huggingface.co/spaces/pollen-robotics/microduck-arena).
   The board ranks performances by votes over the last seven days. Read it live:
-  `curl -s -H "Authorization: Bearer $HF_TOKEN" https://pollen-robotics-microduck-arena.hf.space/api/events/got-a-talent/leaderboard`
+  `curl -s https://pollen-robotics-microduck-arena.hf.space/api/events/got-a-talent/leaderboard`
   (each row: `user`, `policy_name`, `votes`, `shown`).
 - Player points: +100 for a first publication in a challenge, +10 per publication (the first 3 per
   UTC day, all challenges together), +250/+150/+100 while holding first/second/third place (a

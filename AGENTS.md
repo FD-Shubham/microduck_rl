@@ -18,8 +18,6 @@ If the user has not said which challenge, ask.
 
 Shared facts:
 
-- While the Arena wheel sits on a private Hub repo, every `uv` command here needs `HF_TOKEN`:
-  `export HF_TOKEN=$(cat ~/.cache/huggingface/token)` after `hf auth login`.
 - The robot model and the reward functions come from the `mjlab-microduck` package
   ([microduck_rl](https://github.com/pollen-robotics/microduck_rl)); they are not edited here.
   Its [AGENTS.md](https://github.com/pollen-robotics/microduck_rl/blob/develop/AGENTS.md) holds

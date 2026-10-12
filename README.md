@@ -45,16 +45,10 @@ opens one challenge.
 
 Needs Python 3.12 and `uv`. Training needs an NVIDIA GPU, or Hugging Face Jobs.
 
-While the Arena wheel sits on a private Hub repo, EVERY `uv` command in this
-checkout needs `HF_TOKEN` — even a plain `uv run` re-checks the lock and
-re-fetches the wheel URL, and gets a 401 without it. Log in once
-(`hf auth login`), then export the token in the shell (or its profile) before
-any `uv` command:
-
 ```bash
 git clone https://github.com/pollen-robotics/microduck-challenges && cd microduck-challenges
-export HF_TOKEN=$(cat ~/.cache/huggingface/token)   # while the Arena wheel is private
 uv sync --group workshop
+uv run hf auth login   # once: Hugging Face Jobs and publish run under your account
 uv run train Mjlab-Sprint2m-MicroDuck --env.scene.num-envs 4096 --agent.max-iterations 3000 \
     --agent.seed 1 --agent.logger tensorboard --agent.run-name first
 # no GPU: add --hf-jobs --no-wandb
