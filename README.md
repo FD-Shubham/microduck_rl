@@ -21,6 +21,8 @@ MicroDuck Got a Talent is a performance, not a race: the Arena plays the entry's
 head_pitch, head_yaw, head_roll). Check a policy against a timeline with
 `uv run --frozen --group workshop python -m microduck_challenges.got_a_talent.check policy.onnx [--timeline FILE]`,
 and publish the timeline with the policy: `uv run publish … --timeline src/microduck_challenges/got_a_talent/timeline.json`.
+A keyframe can also pull the pad's triggers, `"triggers": [rt, lt]`: RT quacks, LT wheees, both
+open the beak (the Arena's [Got a Talent guide](https://pollen-robotics-microduck-arena.hf.space/#/e/got-a-talent/guide)).
 
 ## The workshop
 
