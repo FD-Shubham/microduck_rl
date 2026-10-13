@@ -57,6 +57,12 @@ From each keyframe's `t` until the next one, the policy reads that keyframe's nu
 keyframe leaves out is zeros, not the previous value. The first keyframe is at 0, times go up, at most
 1000 keyframes, every number within ±10, `duration_s` at most 20.
 
+A performance can also make the duck heard, with nothing for the policy to learn: `triggers` in a
+keyframe (RT quacks, LT wheees), a `song` of notes beside the keyframes, and a `voice` block that
+tunes the duck's voice. The Arena's
+[Got a Talent guide](https://pollen-robotics-microduck-arena.hf.space/#/e/got-a-talent/guide) has the
+rules. Offer it to the user when the performance wants sound; never add it without asking.
+
 **What the policy can do is what training showed it.** This training samples:
 
 - the sit flag at exactly 0 or 1 (values in between were never seen);
