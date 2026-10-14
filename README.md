@@ -24,7 +24,7 @@ and publish the timeline with the policy: `uv run publish … --timeline src/mic
 A performance can also make the duck heard: `"triggers": [rt, lt]` in a keyframe (RT quacks, LT
 wheees), a `song` of notes beside the keyframes, and a `voice` that tunes it (the Arena's
 [Got a Talent guide](https://pollen-robotics-microduck-arena.hf.space/#/e/got-a-talent/guide)).
-A performance can also be a troupe of up to 4 ducks in one physics. Each duck has its own policy
+A performance can also be a troupe of up to 8 ducks in one physics. Each duck has its own policy
 (yours, or any public one on the Hub pinned to a commit, on legs or rollers), place, keyframes,
 voice and song: see the guide's Troupe and Placement sections.
 

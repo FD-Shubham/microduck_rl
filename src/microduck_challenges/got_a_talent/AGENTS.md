@@ -63,7 +63,7 @@ tunes the duck's voice. The Arena's
 [Got a Talent guide](https://pollen-robotics-microduck-arena.hf.space/#/e/got-a-talent/guide) has the
 rules. Offer it to the user when the performance wants sound; never add it without asking.
 
-A performance can also be a **troupe** of up to 4 ducks in one shared physics. The star is this
+A performance can also be a **troupe** of up to 8 ducks in one shared physics. The star is this
 folder's policy (`"self"`); the others are any policy, the user's or a public one pinned to a full
 commit, on legs or rollers. Each duck has its own place, keyframes, voice and song, and each duck's
 keyframes are commands for its own policy. The Arena's
